@@ -25,6 +25,7 @@ func main() {
 
 	e.GET("/:table", handler.Read)
 	e.POST("/:table", handler.Create)
+	e.PUT("/:table/:id", handler.Update)
 	e.DELETE("/:table/:id", handler.Delete)
 	e.Logger.Fatal(e.Start(os.Getenv("WEBSERVER_LISTEN_ADDRESS")))
 
