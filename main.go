@@ -15,12 +15,21 @@ func main() {
 	if errEnv != nil {
 		log.Fatal("Failed to load env file. Make sure .env file is exists!")
 	}
-	config.Init()
+	_, err := config.Init()
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Database successfully initialized")
 
 	e := echo.New()
 
-	e.GET("/"+os.Getenv("TABLE"), handler.Read)
-	e.POST("/"+os.Getenv("TABLE"), handler.Create)
-	e.DELETE("/"+os.Getenv("TABLE"+"/:id"), handler.Delete)
-	e.Logger.Fatal(e.Start(os.Getenv("SERVER_HOST")+":"+os.Getenv("SERVER_PORT")))
+	e.GET("/:table", handler.Read)
+	e.POST("/:table", handler.Create)
+	e.DELETE("/:table/:id", handler.Delete)
+	e.Logger.Fatal(e.Start(os.Getenv("WEBSERVER_LISTEN_ADDRESS")))
+
+	log.Println("Webserver successfully started")
+	log.Println("Listening to port ", os.Getenv("WEBSERVER_LISTEN_ADDRESS"))
+
+	e.Logger.Fatal(e.Start(os.Getenv("WEBSERVER_LISTEN_ADDRESS")))
 }
