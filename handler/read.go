@@ -3,19 +3,17 @@ package handler
 import (
 	"crud-engine/config"
 	"encoding/json"
-	"net/http"
-	"strings"
-
 	"github.com/labstack/echo/v4"
+	"net/http"
 )
 
 func Read(c echo.Context) error {
-	table := strings.ReplaceAll(c.Path(), "/", "")
+	table := c.Param("table")
 	db := config.CreateCon()
-	
+
 	sqlStatement := "SELECT * FROM " + table
 
-	rows, err := db.Query(sqlStatement)
+	rows, err := db.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}

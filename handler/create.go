@@ -11,10 +11,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Create (c echo.Context) error {
-	table := strings.ReplaceAll(c.Path(), "/", "")
+func Create(c echo.Context) error {
+	table := c.Param("table")
 	db := config.CreateCon()
-	
+
 	var jsonBody map[string]interface{}
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
@@ -24,10 +24,10 @@ func Create (c echo.Context) error {
 	var columns string
 	var values string
 	for key := range jsonBody {
-		columns += key +", "
-		values 	+= "'"
-		values 	+= jsonBody[key].(string)
-		values 	+= "', "
+		columns += key + ", "
+		values += "'"
+		values += jsonBody[key].(string)
+		values += "', "
 	}
 	columns = strings.TrimRight(columns, ", ")
 	values = strings.TrimRight(values, ", ")
@@ -48,15 +48,15 @@ func Create (c echo.Context) error {
 	}
 
 	log.Println(result.LastInsertId())
-	return c.JSON(http.StatusOK, values) 
+	return c.JSON(http.StatusOK, values)
 }
 
 func getColumn(table string, columns string) string {
-	sqlStatement := "INSERT "+table+" ("+ columns +") "
+	sqlStatement := "INSERT " + table + " (" + columns + ") "
 	return sqlStatement
 }
 
 func getValue(values string) string {
-	sqlStatement := "VALUES ("+values+")"
+	sqlStatement := "VALUES (" + values + ")"
 	return sqlStatement
 }
