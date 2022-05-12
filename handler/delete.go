@@ -16,7 +16,7 @@ func Delete(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	sqlStatement := "DELETE FROM " + table + " WHERE " + key + " = " + id
+	sqlStatement := "DELETE FROM " + table + " WHERE " + key + " ='" + id + "'"
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
