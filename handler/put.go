@@ -9,8 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Update(c echo.Context) error {
-	//table := strings.ReplaceAll(c.Path(), "/", "")
+func Put(c echo.Context) error {
 	table := c.Param("table")
 	id := c.Param("id")
 	db := config.CreateCon()
@@ -44,5 +43,6 @@ func Update(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, result)
+	resultId, _ := result.LastInsertId()
+	return c.JSON(http.StatusOK, resultId)
 }

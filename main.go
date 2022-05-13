@@ -23,9 +23,10 @@ func main() {
 
 	e := echo.New()
 
-	e.GET("/:table", handler.Read)
-	e.POST("/:table", handler.Create)
-	e.PUT("/:table/:id", handler.Update)
+	e.GET("/:table", handler.Get)
+	e.POST("/:table", handler.Post)
+	e.PUT("/:table/:id", handler.Put)
+	e.PATCH("/:table/:id", handler.Put)
 	e.DELETE("/:table/:id", handler.Delete)
 	e.Logger.Fatal(e.Start(os.Getenv("WEBSERVER_LISTEN_ADDRESS")))
 

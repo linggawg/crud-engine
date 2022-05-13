@@ -2,8 +2,9 @@ package handler
 
 import (
 	"crud-engine/config"
-	"github.com/labstack/echo/v4"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 func Delete(c echo.Context) error {
@@ -28,5 +29,6 @@ func Delete(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, result)
+	resultId, _ := result.LastInsertId()
+	return c.JSON(http.StatusOK, resultId)
 }
