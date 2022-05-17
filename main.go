@@ -3,6 +3,7 @@ package main
 import (
 	"crud-engine/config"
 	"crud-engine/handler"
+	"crud-engine/mongocontroller"
 	"log"
 	"os"
 
@@ -21,6 +22,13 @@ func main() {
 	}
 	log.Println("Database successfully initialized")
 
+	//  Test Connection Mongo DB
+	_, err = config.InitMongo()
+	if err != nil {
+		panic(err)
+	}
+	log.Println("MongoDB successfully initialized")
+
 	e := echo.New()
 
 	e.GET("/:table", handler.Get)
@@ -28,7 +36,12 @@ func main() {
 	e.PUT("/:table/:id", handler.Put)
 	e.PATCH("/:table/:id", handler.Put)
 	e.DELETE("/:table/:id", handler.Delete)
-	e.Logger.Fatal(e.Start(os.Getenv("WEBSERVER_LISTEN_ADDRESS")))
+
+	e.GET("/getAllUsers", mongocontroller.GetAllUsers)
+	e.POST("/createProfile", mongocontroller.CreateProfile)
+	e.POST("/getUserProfile", mongocontroller.GetUserProfile)
+	e.PUT("/updateProfile/:id", mongocontroller.UpdateProfile)
+	e.DELETE("/deleteProfile/:id", mongocontroller.DeleteProfile)
 
 	log.Println("Webserver successfully started")
 	log.Println("Listening to port ", os.Getenv("WEBSERVER_LISTEN_ADDRESS"))
