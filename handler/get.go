@@ -3,54 +3,57 @@ package handler
 import (
 	"crud-engine/config"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
+
+type PageFetchInput struct {
+	Page *int
+	Size *int
+	Sort string
+}
 
 func Get(c echo.Context) error {
 	db := config.CreateCon()
 	var sqlStatement string
 
+	pagination, err := getPagination(c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
 	isQuery := c.QueryParam("isQuery")
 	if isQuery == "true" {
 		sqlStatement = c.Param("table")
-	}else{
+	} else {
 		table := c.Param("table")
 		primaryKey, err := getPrimaryKey(db, table, c)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
-		}
-	
-		// pageNo := c.QueryParam("pageNo")
-		pageSize := ""
-		if c.QueryParam("pageSize") != "" {
-			pageSize = " LIMIT " + c.QueryParam("pageSize")
 		}
 
 		isDistinct := ""
 		if c.QueryParam("isDistinct") == "true" {
 			isDistinct = "DISTINCT "
 		}
-	
+
 		query := ""
 		if c.QueryParam("query") != "" {
 			query = " WHERE " + c.QueryParam("query")
 		}
-		
+
 		colls := c.QueryParam("colls")
 		if colls == "" {
 			colls = "*"
 		}
-	
-		sortBy := " ORDER BY " 
-		if c.QueryParam("sortBy") == "" {
-			sortBy += primaryKey+", asc" 
-		} else {
-			sortBy += c.QueryParam("sortBy")
-		}
-		sqlStatement = "SELECT " + isDistinct + colls +" FROM " + table + query + sortBy + pageSize
+
+		sqlStatement = "SELECT " + isDistinct + colls + " FROM " + table + query
+		sqlStatement = setQueryPagination(sqlStatement, primaryKey, pagination)
 	}
+	fmt.Println(sqlStatement)
 
 	rows, err := db.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
@@ -94,4 +97,57 @@ func Get(c echo.Context) error {
 	}
 
 	return c.String(http.StatusOK, string(jsonData))
+}
+
+func setQueryPagination(query string, primaryKey string, p *PageFetchInput) (newQuery string) {
+
+	if p != nil {
+		if p.Sort != "" {
+			query += " ORDER BY " + p.Sort
+		} else {
+			query += " ORDER BY " + primaryKey + " ASC"
+		}
+		if p.Size != nil {
+			sz := *p.Size
+			size := strconv.Itoa(sz)
+			query += " LIMIT " + size
+			if p.Page != nil {
+				pg := *p.Page
+				page := strconv.Itoa(pg * sz)
+				query += " OFFSET " + page
+			}
+		}
+	}
+	return query
+}
+
+func getPagination(c echo.Context) (p *PageFetchInput, e error) {
+	var (
+		getParam = c.QueryParams()
+		page     *int
+		size     *int
+	)
+	allParams := getParam.Get("pageSize")
+	if allParams != "" {
+		sz, err := strconv.Atoi(allParams)
+		if err != nil {
+			return p, err
+		}
+		size = &sz
+		allParams := getParam.Get("pageNo")
+		if allParams != "" {
+			pg, err := strconv.Atoi(allParams)
+			if err != nil {
+				return p, err
+			}
+			page = &pg
+		}
+	}
+
+	p = &PageFetchInput{
+		Page: page,
+		Size: size,
+		Sort: getParam.Get("sortBy"),
+	}
+	return p, nil
 }
