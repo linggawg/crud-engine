@@ -7,6 +7,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// Delete DeleteDate godoc
+// @Summary      Delete Data
+// @Description  Delete data by ID (primary key)
+// @Tags         CrudEngine
+// @Accept       json
+// @Produce      json
+// @Param        table   path    string  true  "Table Name"
+// @Param        id   path    string  true  "Primary Key"
+// @Success      200  {object} map[string]interface{}
+// @Router       /{table}/{id} [delete]
 func Delete(c echo.Context) error {
 	table := c.Param("table")
 	db := config.CreateCon()

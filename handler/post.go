@@ -9,6 +9,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// Post UpdateData godoc
+// @Summary      Insert Data
+// @Description  Insert data by column name in format JSON
+// @Tags         CrudEngine
+// @Accept       json
+// @Produce      json
+// @Param        table   path    string  true  "Table Name"
+// @Param		 insertRequest body map[string]interface{} true "JSON request body based on column name"
+// @Success      200  {object} map[string]interface{}
+// @Router       /{table} [post]
 func Post(c echo.Context) error {
 	table := c.Param("table")
 	db := config.CreateCon()

@@ -9,6 +9,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// Put UpdateData godoc
+// @Summary      Update Data
+// @Description  Update data by ID (primary key) and data by column name in format JSON
+// @Tags         CrudEngine
+// @Accept       json
+// @Produce      json
+// @Param        table   path    string  true  "Table Name"
+// @Param        id   path    string  true  "Primary Key"
+// @Param		 updateRequest body map[string]interface{} true "JSON request body based on column name"
+// @Success      200  {object} map[string]interface{}
+// @Router       /{table}/{id} [put]
 func Put(c echo.Context) error {
 	table := c.Param("table")
 	id := c.Param("id")
