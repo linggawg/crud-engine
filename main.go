@@ -4,6 +4,7 @@ import (
 	"crud-engine/config"
 	_ "crud-engine/docs"
 	"crud-engine/handler"
+	"crud-engine/modules/users"
 	"crud-engine/mongocontroller"
 	conn "crud-engine/pkg/database"
 	"fmt"
@@ -54,6 +55,10 @@ func main() {
 	// Routes
 	e.GET("/", HealthCheck)
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	//initiate auth http handler
+	authGroup := e.Group("")
+	users.New(sqlx).Mount(authGroup)
 
 	//initiate user http handler
 	crudGroup := e.Group("/sql")

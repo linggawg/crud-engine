@@ -2,6 +2,7 @@ package mongocontroller
 
 import (
 	"context"
+	"crud-engine/pkg/middleware"
 	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -29,11 +30,11 @@ func New(db *mongo.Database) *HttpMongo {
 }
 
 func (h *HttpMongo) Mount(echoGroup *echo.Group) {
-	echoGroup.GET("/getAllUsers", h.GetAllUsers)
-	echoGroup.POST("/createProfile", h.CreateProfile)
-	echoGroup.POST("/getUserProfile", h.GetUserProfile)
-	echoGroup.PUT("/updateProfile/:id", h.UpdateProfile)
-	echoGroup.DELETE("/deleteProfile/:id", h.DeleteProfile)
+	echoGroup.GET("/getAllUsers", h.GetAllUsers, middleware.NoAuth())
+	echoGroup.POST("/createProfile", h.CreateProfile, middleware.NoAuth())
+	echoGroup.POST("/getUserProfile", h.GetUserProfile, middleware.NoAuth())
+	echoGroup.PUT("/updateProfile/:id", h.UpdateProfile, middleware.NoAuth())
+	echoGroup.DELETE("/deleteProfile/:id", h.DeleteProfile, middleware.NoAuth())
 }
 
 // Create Profile or Signup
