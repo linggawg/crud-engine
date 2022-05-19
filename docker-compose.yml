@@ -1,0 +1,11 @@
+version: '3.3'
+services:
+  crud-engine:
+    image: crud-engine:1.0
+    restart: always
+    ports:
+      - '3000:3000'
+    expose:
+      - '3000'
+    volumes:
+      - .env:/app/.env
