@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"crud-engine/config"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,9 +30,9 @@ type PageFetchInput struct {
 // @Param        sortBy    query     string  false  "sorting data by column name (ex : name ASC / name DESC)"
 // @Success      200  {object} map[string]interface{}
 // @Router       /{table} [get]
-func Get(c echo.Context) error {
-	db := config.CreateCon()
+func (h *HttpSqlx) Get(c echo.Context) error {
 	var sqlStatement string
+	db := h.db
 
 	pagination, err := getPagination(c)
 	if err != nil {

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"crud-engine/config"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -19,9 +18,9 @@ import (
 // @Param		 insertRequest body map[string]interface{} true "JSON request body based on column name"
 // @Success      200  {object} map[string]interface{}
 // @Router       /{table} [post]
-func Post(c echo.Context) error {
+func (h *HttpSqlx) Post(c echo.Context) error {
 	table := c.Param("table")
-	db := config.CreateCon()
+	db := h.db
 
 	var jsonBody map[string]interface{}
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"crud-engine/config"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -17,9 +16,9 @@ import (
 // @Param        id   path    string  true  "Primary Key"
 // @Success      200  {object} map[string]interface{}
 // @Router       /{table}/{id} [delete]
-func Delete(c echo.Context) error {
+func (h *HttpSqlx) Delete(c echo.Context) error {
 	table := c.Param("table")
-	db := config.CreateCon()
+	db := h.db
 
 	id := c.Param("id")
 	key, err := getPrimaryKey(db, table, c)

@@ -5,14 +5,13 @@ import (
 	_ "crud-engine/docs"
 	"crud-engine/handler"
 	"crud-engine/mongocontroller"
+	conn "crud-engine/pkg/database"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 	"log"
 	"net/http"
-	"os"
-
-	"github.com/joho/godotenv"
 )
 
 // @title Echo Swagger Example API
@@ -31,18 +30,14 @@ import (
 // @BasePath /
 // @schemes http
 func main() {
-	errEnv := godotenv.Load()
-	if errEnv != nil {
-		log.Fatal("Failed to load env file. Make sure .env file is exists!")
-	}
-	_, err := config.Init()
+	sqlx, err := conn.Init(config.GlobalEnv.SQLXDatabase)
 	if err != nil {
 		panic(err)
 	}
 	log.Println("Database successfully initialized")
 
 	//  Test Connection Mongo DB
-	_, err = config.InitMongo()
+	_, err = mongocontroller.InitMongo()
 	if err != nil {
 		panic(err)
 	}
@@ -60,11 +55,10 @@ func main() {
 	e.GET("/", HealthCheck)
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	e.GET("/:table", handler.Get)
-	e.POST("/:table", handler.Post)
-	e.PUT("/:table/:id", handler.Put)
-	e.PATCH("/:table/:id", handler.Put)
-	e.DELETE("/:table/:id", handler.Delete)
+	//initiate user http handler
+	crudGroup := e.Group("/sql")
+	crudSQLX := handler.New(sqlx)
+	crudSQLX.Mount(crudGroup)
 
 	e.GET("/getAllUsers", mongocontroller.GetAllUsers)
 	e.POST("/createProfile", mongocontroller.CreateProfile)
@@ -72,10 +66,10 @@ func main() {
 	e.PUT("/updateProfile/:id", mongocontroller.UpdateProfile)
 	e.DELETE("/deleteProfile/:id", mongocontroller.DeleteProfile)
 
+	listenerPort := fmt.Sprintf(":%d", config.GlobalEnv.HTTPPort)
 	log.Println("Webserver successfully started")
-	log.Println("Listening to port ", os.Getenv("WEBSERVER_LISTEN_ADDRESS"))
-
-	e.Logger.Fatal(e.Start(os.Getenv("WEBSERVER_LISTEN_ADDRESS")))
+	log.Println("Listening to port ", config.GlobalEnv.HTTPPort)
+	e.Logger.Fatal(e.Start(listenerPort))
 }
 
 // HealthCheck godoc

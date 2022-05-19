@@ -2,7 +2,6 @@ package mongocontroller
 
 import (
 	"context"
-	"crud-engine/config"
 	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -23,7 +22,7 @@ type user struct {
 // Create Profile or Signup
 func GetAllUsers(c echo.Context) error {
 	var results []primitive.M //slice for multiple documents
-	var userCollection = config.DbMongo()
+	var userCollection = DbMongo()
 	cur, err := userCollection.Collection("mahasiswa").Find(context.TODO(), bson.D{{}}) //returns a *mongo.Cursor
 	if err != nil {
 		fmt.Println(err)
@@ -59,7 +58,7 @@ func GetUserProfile(c echo.Context) error {
 		fmt.Print(e)
 	}
 	var result primitive.M //  an unordered representation of a BSON document which is a Map
-	var userCollection = config.DbMongo()
+	var userCollection = DbMongo()
 	err := userCollection.Collection("mahasiswa").FindOne(context.TODO(), bson.D{{"name", body.Name}}).Decode(&result)
 	if err != nil {
 
@@ -76,7 +75,7 @@ func GetUserProfile(c echo.Context) error {
 func CreateProfile(c echo.Context) error {
 
 	var person user
-	var userCollection = config.DbMongo()
+	var userCollection = DbMongo()
 	err := json.NewDecoder(c.Request().Body).Decode(&person) // storing in person variable of type user
 	if err != nil {
 		fmt.Print(err)
@@ -114,7 +113,7 @@ func UpdateProfile(c echo.Context) error {
 	if err != nil {
 		log.Fatal("primitive.ObjectIDFromHex ERROR:", err)
 	}
-	var userCollection = config.DbMongo()
+	var userCollection = DbMongo()
 	toDocBody, err := toDoc(body)
 	if err != nil {
 		log.Fatal(" ERROR:", err)
@@ -148,7 +147,7 @@ func toDoc(v interface{}) (doc *bson.D, err error) {
 func DeleteProfile(c echo.Context) error {
 	id := c.Param("id")
 	opts := options.Delete().SetCollation(&options.Collation{}) // to specify language-specific rules for string comparison, such as rules for lettercase
-	var userCollection = config.DbMongo()
+	var userCollection = DbMongo()
 	idPrimitive, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		log.Fatal("primitive.ObjectIDFromHex ERROR:", err)
