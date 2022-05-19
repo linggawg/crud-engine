@@ -10,7 +10,7 @@ import (
 )
 
 // Init the database from config to database connection
-func Init(cfg SQLXConfig) (*sqlx.DB, error) {
+func InitSqlx(cfg SQLXConfig) (*sqlx.DB, error) {
 	var (
 		toDNS string
 		err   error

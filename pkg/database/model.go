@@ -9,3 +9,8 @@ type SQLXConfig struct {
 	Password string
 	Dialect  string
 }
+
+type MongoConfig struct {
+	Host string
+	Name string
+}

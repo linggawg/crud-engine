@@ -17,7 +17,7 @@ paths:
     get:
       consumes:
       - '*/*'
-      description: get the status of server 1.
+      description: get the status of server.
       produces:
       - application/json
       responses:
@@ -26,7 +26,7 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Show the status of server 1.
+      summary: Show the status of server.
       tags:
       - HealthCheck
   /{table}:

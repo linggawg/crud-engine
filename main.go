@@ -30,14 +30,14 @@ import (
 // @BasePath /
 // @schemes http
 func main() {
-	sqlx, err := conn.Init(config.GlobalEnv.SQLXDatabase)
+	sqlx, err := conn.InitSqlx(config.GlobalEnv.SQLXDatabase)
 	if err != nil {
 		panic(err)
 	}
 	log.Println("Database successfully initialized")
 
 	//  Test Connection Mongo DB
-	_, err = mongocontroller.InitMongo()
+	mongoDb, err := conn.InitMongo(config.GlobalEnv.MongoDb)
 	if err != nil {
 		panic(err)
 	}
@@ -60,11 +60,10 @@ func main() {
 	crudSQLX := handler.New(sqlx)
 	crudSQLX.Mount(crudGroup)
 
-	e.GET("/getAllUsers", mongocontroller.GetAllUsers)
-	e.POST("/createProfile", mongocontroller.CreateProfile)
-	e.POST("/getUserProfile", mongocontroller.GetUserProfile)
-	e.PUT("/updateProfile/:id", mongocontroller.UpdateProfile)
-	e.DELETE("/deleteProfile/:id", mongocontroller.DeleteProfile)
+	//initiate mongo http handler
+	crudMongo := e.Group("/mongodb")
+	handlerMongo := mongocontroller.New(mongoDb)
+	handlerMongo.Mount(crudMongo)
 
 	listenerPort := fmt.Sprintf(":%d", config.GlobalEnv.HTTPPort)
 	log.Println("Webserver successfully started")

@@ -10,6 +10,7 @@ import (
 type Env struct {
 	HTTPPort     uint16
 	SQLXDatabase conn.SQLXConfig
+	MongoDb      conn.MongoConfig
 }
 
 // GlobalEnv global environment
@@ -39,5 +40,10 @@ func init() {
 		Username: os.Getenv("DB_USER"),
 		Password: os.Getenv("DB_PASSWORD"),
 		Dialect:  os.Getenv("DB_DIALECT"),
+	}
+
+	GlobalEnv.MongoDb = conn.MongoConfig{
+		Host: os.Getenv("MONGO_DB_HOST"),
+		Name: os.Getenv("MONGO_DB_NAME"),
 	}
 }

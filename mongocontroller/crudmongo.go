@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"net/http"
@@ -19,10 +20,26 @@ type user struct {
 	City string `json:city`
 }
 
+type HttpMongo struct {
+	db *mongo.Database
+}
+
+func New(db *mongo.Database) *HttpMongo {
+	return &HttpMongo{db}
+}
+
+func (h *HttpMongo) Mount(echoGroup *echo.Group) {
+	echoGroup.GET("/getAllUsers", h.GetAllUsers)
+	echoGroup.POST("/createProfile", h.CreateProfile)
+	echoGroup.POST("/getUserProfile", h.GetUserProfile)
+	echoGroup.PUT("/updateProfile/:id", h.UpdateProfile)
+	echoGroup.DELETE("/deleteProfile/:id", h.DeleteProfile)
+}
+
 // Create Profile or Signup
-func GetAllUsers(c echo.Context) error {
+func (h *HttpMongo) GetAllUsers(c echo.Context) error {
 	var results []primitive.M //slice for multiple documents
-	var userCollection = DbMongo()
+	var userCollection = h.db
 	cur, err := userCollection.Collection("mahasiswa").Find(context.TODO(), bson.D{{}}) //returns a *mongo.Cursor
 	if err != nil {
 		fmt.Println(err)
@@ -49,16 +66,15 @@ func GetAllUsers(c echo.Context) error {
 
 // Get Profile of a particular User by Name
 
-func GetUserProfile(c echo.Context) error {
+func (h *HttpMongo) GetUserProfile(c echo.Context) error {
 
 	var body user
 	e := json.NewDecoder(c.Request().Body).Decode(&body)
 	if e != nil {
-
 		fmt.Print(e)
 	}
 	var result primitive.M //  an unordered representation of a BSON document which is a Map
-	var userCollection = DbMongo()
+	var userCollection = h.db
 	err := userCollection.Collection("mahasiswa").FindOne(context.TODO(), bson.D{{"name", body.Name}}).Decode(&result)
 	if err != nil {
 
@@ -72,10 +88,10 @@ func GetUserProfile(c echo.Context) error {
 	return c.String(http.StatusOK, string(jsonData))
 }
 
-func CreateProfile(c echo.Context) error {
+func (h *HttpMongo) CreateProfile(c echo.Context) error {
 
 	var person user
-	var userCollection = DbMongo()
+	var userCollection = h.db
 	err := json.NewDecoder(c.Request().Body).Decode(&person) // storing in person variable of type user
 	if err != nil {
 		fmt.Print(err)
@@ -96,12 +112,11 @@ func CreateProfile(c echo.Context) error {
 
 //Update Profile of User
 
-func UpdateProfile(c echo.Context) error {
+func (h *HttpMongo) UpdateProfile(c echo.Context) error {
 	id := c.Param("id")
 	var body user
 	e := json.NewDecoder(c.Request().Body).Decode(&body)
 	if e != nil {
-
 		fmt.Print(e)
 	}
 	after := options.After // for returning updated document
@@ -113,7 +128,7 @@ func UpdateProfile(c echo.Context) error {
 	if err != nil {
 		log.Fatal("primitive.ObjectIDFromHex ERROR:", err)
 	}
-	var userCollection = DbMongo()
+	var userCollection = h.db
 	toDocBody, err := toDoc(body)
 	if err != nil {
 		log.Fatal(" ERROR:", err)
@@ -144,10 +159,10 @@ func toDoc(v interface{}) (doc *bson.D, err error) {
 
 //Delete Profile of User
 
-func DeleteProfile(c echo.Context) error {
+func (h *HttpMongo) DeleteProfile(c echo.Context) error {
 	id := c.Param("id")
 	opts := options.Delete().SetCollation(&options.Collation{}) // to specify language-specific rules for string comparison, such as rules for lettercase
-	var userCollection = DbMongo()
+	var userCollection = h.db
 	idPrimitive, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		log.Fatal("primitive.ObjectIDFromHex ERROR:", err)

@@ -27,7 +27,7 @@ const docTemplate = `{
     "paths": {
         "/": {
             "get": {
-                "description": "get the status of server 1.",
+                "description": "get the status of server.",
                 "consumes": [
                     "*/*"
                 ],
@@ -37,7 +37,7 @@ const docTemplate = `{
                 "tags": [
                     "HealthCheck"
                 ],
-                "summary": "Show the status of server 1.",
+                "summary": "Show the status of server.",
                 "responses": {
                     "200": {
                         "description": "OK",
