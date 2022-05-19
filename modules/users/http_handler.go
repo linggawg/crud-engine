@@ -7,13 +7,12 @@ import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/guregu/null.v4"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -28,6 +27,7 @@ func New(db *sqlx.DB) *HttpSqlx {
 // Mount function
 func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
 	echoGroup.POST("/login", h.Login, middleware.NoAuth())
+	echoGroup.POST("/register", h.RegisterUser, middleware.NoAuth())
 }
 
 // Login function
@@ -57,7 +57,7 @@ func (h *HttpSqlx) Login(c echo.Context) error {
 		return utils.Response(nil, "Invalid Username or Password", http.StatusBadRequest, c)
 	}
 
-	token, err := CreateToken(user.Username)
+	token, err := middleware.CreateToken(user.Username)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
@@ -88,23 +88,102 @@ func (s *HttpSqlx) GetByEmail(ctx context.Context, email string) (user *models.U
 	return &u, nil
 }
 
-// CreateToken . . .
-func CreateToken(uid string) (token *models.ResToken, err error) {
-	// duration set 3600 seconds
-	duration := (time.Hour * 1).Seconds()
-
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["sub"] = uid
-	claims["iat"] = time.Now().Unix()                    //Token create
-	claims["exp"] = time.Now().Add(time.Hour * 1).Unix() //Token expires after 1 hour
-	tk := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessToken, err := tk.SignedString([]byte(os.Getenv("API_SECRET")))
-	token = &models.ResToken{
-		TokenType: "Bearer",
-		Duration:  duration,
-		Token:     accessToken,
+func (s *HttpSqlx) RegisterUser(c echo.Context) error {
+	var (
+		params models.ReqUser
+	)
+	err := json.NewDecoder(c.Request().Body).Decode(&params)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
-	return token, err
+	err = validator.New().Struct(params)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
 
+	_, err = s.GetByEmail(c.Request().Context(), params.Email)
+	if err == nil {
+		return utils.Response(nil, "Email has been used", http.StatusFound, c)
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusInternalServerError, c)
+	}
+	password := string(hashedPassword)
+
+	user := &models.User{
+		Username:  params.Username,
+		Email:     params.Email,
+		Password:  password,
+		CreatedBy: params.UserId,
+		CreatedAt: null.TimeFrom(time.Now()),
+		IsDeleted: false,
+	}
+	err = s.Insert(c.Request().Context(), user)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusInternalServerError, c)
+	}
+
+	return utils.Response(nil, "Register user", http.StatusOK, c)
+
+}
+
+func (s *HttpSqlx) Insert(ctx context.Context, user *models.User) (err error) {
+	query := `
+	INSERT INTO users
+		(
+			username,
+			email,
+			password,
+			created_at,
+			created_by,
+			last_update_by,
+			updated_at,
+			is_deleted
+		) 
+		VALUES 
+		(
+			:username,
+			:email,
+			:password,
+			:created_at,
+			:created_by,
+			:last_update_by,
+			:updated_at,
+			:is_deleted
+		) RETURNING id ;
+	`
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := s.db.NamedQueryContext(ctx, query, &models.User{
+		Username:     user.Username,
+		Email:        user.Email,
+		Password:     user.Password,
+		CreatedAt:    user.CreatedAt,
+		CreatedBy:    user.CreatedBy,
+		UpdatedAt:    user.CreatedAt,
+		LastUpdateBy: &user.CreatedBy,
+		IsDeleted:    user.IsDeleted,
+	})
+	if err != nil {
+		return err
+	}
+	if res.Next() {
+		res.Scan(&user.ID)
+	}
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return err
 }

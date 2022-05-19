@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crud-engine/modules/models"
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"fmt"
@@ -33,6 +34,27 @@ func VerifyBearer() echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+// CreateToken . . .
+func CreateToken(uid string) (token *models.ResToken, err error) {
+	// duration set 3600 seconds
+	duration := (time.Hour * 1).Seconds()
+
+	claims := jwt.MapClaims{}
+	claims["authorized"] = true
+	claims["sub"] = uid
+	claims["iat"] = time.Now().Unix()                    //Token create
+	claims["exp"] = time.Now().Add(time.Hour * 1).Unix() //Token expires after 1 hour
+	tk := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	accessToken, err := tk.SignedString([]byte(os.Getenv("API_SECRET")))
+	token = &models.ResToken{
+		TokenType: "Bearer",
+		Duration:  duration,
+		Token:     accessToken,
+	}
+	return token, err
+
 }
 
 // TokenValid . . .
