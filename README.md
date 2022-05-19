@@ -30,3 +30,12 @@ DB_PORT=3306
 ```sh
 docker-compose up -d
 ```
+## SwaggerUI?
+- Generate Swagger Specification and SwaggerUI
+```sh
+$ swag init -g main.go --output docs
+```
+- Documentation API in path
+```sh
+{{base_url}}/swagger/index.html
+```

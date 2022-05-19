@@ -1,0 +1,171 @@
+basePath: /
+host: localhost:3000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Echo Swagger Example API
+  version: "1.0"
+paths:
+  /:
+    get:
+      consumes:
+      - '*/*'
+      description: get the status of server.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Show the status of server.
+      tags:
+      - HealthCheck
+  /{table}:
+    get:
+      consumes:
+      - application/json
+      description: Find all data by statement parameter
+      parameters:
+      - description: Table Name
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: if isQuery is true, the sql query statement is fetched directly
+          from the path table
+        in: query
+        name: isQuery
+        type: boolean
+      - description: ' DISTINCT statement is used to return only distinct (different)
+          values. '
+        in: query
+        name: isDistinct
+        type: boolean
+      - description: 'column name (ex : username, email)'
+        in: query
+        name: colls
+        type: string
+      - description: limit per page
+        in: query
+        name: pageSize
+        type: integer
+      - description: 'page number list data '
+        in: query
+        name: pageNo
+        type: integer
+      - description: 'sorting data by column name (ex : name ASC / name DESC)'
+        in: query
+        name: sortBy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Find all Data
+      tags:
+      - CrudEngine
+    post:
+      consumes:
+      - application/json
+      description: Insert data by column name in format JSON
+      parameters:
+      - description: Table Name
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: JSON request body based on column name
+        in: body
+        name: insertRequest
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Insert Data
+      tags:
+      - CrudEngine
+  /{table}/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete data by ID (primary key)
+      parameters:
+      - description: Table Name
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: Primary Key
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete Data
+      tags:
+      - CrudEngine
+    put:
+      consumes:
+      - application/json
+      description: Update data by ID (primary key) and data by column name in format
+        JSON
+      parameters:
+      - description: Table Name
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: Primary Key
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: JSON request body based on column name
+        in: body
+        name: updateRequest
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update Data
+      tags:
+      - CrudEngine
+schemes:
+- http
+swagger: "2.0"

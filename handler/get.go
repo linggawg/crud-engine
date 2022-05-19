@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"crud-engine/config"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,9 +15,24 @@ type PageFetchInput struct {
 	Sort string
 }
 
-func Get(c echo.Context) error {
-	db := config.CreateCon()
+// Get ShowData godoc
+// @Summary      Find all Data
+// @Description  Find all data by statement parameter
+// @Tags         CrudEngine
+// @Accept       json
+// @Produce      json
+// @Param        table   path    string  true  "Table Name"
+// @Param        isQuery    query     boolean  false  "if isQuery is true, the sql query statement is fetched directly from the path table"
+// @Param        isDistinct    query     boolean  false  " DISTINCT statement is used to return only distinct (different) values. "
+// @Param        colls    query     string  false  "column name (ex : username, email)"
+// @Param        pageSize    query     int  false  "limit per page"
+// @Param        pageNo    query     int  false  "page number list data "
+// @Param        sortBy    query     string  false  "sorting data by column name (ex : name ASC / name DESC)"
+// @Success      200  {object} map[string]interface{}
+// @Router       /{table} [get]
+func (h *HttpSqlx) Get(c echo.Context) error {
 	var sqlStatement string
+	db := h.db
 
 	pagination, err := getPagination(c)
 	if err != nil {

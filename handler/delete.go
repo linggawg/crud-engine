@@ -1,15 +1,24 @@
 package handler
 
 import (
-	"crud-engine/config"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 )
 
-func Delete(c echo.Context) error {
+// Delete DeleteDate godoc
+// @Summary      Delete Data
+// @Description  Delete data by ID (primary key)
+// @Tags         CrudEngine
+// @Accept       json
+// @Produce      json
+// @Param        table   path    string  true  "Table Name"
+// @Param        id   path    string  true  "Primary Key"
+// @Success      200  {object} map[string]interface{}
+// @Router       /{table}/{id} [delete]
+func (h *HttpSqlx) Delete(c echo.Context) error {
 	table := c.Param("table")
-	db := config.CreateCon()
+	db := h.db
 
 	id := c.Param("id")
 	key, err := getPrimaryKey(db, table, c)

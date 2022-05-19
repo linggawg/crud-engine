@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"crud-engine/config"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -9,9 +8,19 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Post(c echo.Context) error {
+// Post UpdateData godoc
+// @Summary      Insert Data
+// @Description  Insert data by column name in format JSON
+// @Tags         CrudEngine
+// @Accept       json
+// @Produce      json
+// @Param        table   path    string  true  "Table Name"
+// @Param		 insertRequest body map[string]interface{} true "JSON request body based on column name"
+// @Success      200  {object} map[string]interface{}
+// @Router       /{table} [post]
+func (h *HttpSqlx) Post(c echo.Context) error {
 	table := c.Param("table")
-	db := config.CreateCon()
+	db := h.db
 
 	var jsonBody map[string]interface{}
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
