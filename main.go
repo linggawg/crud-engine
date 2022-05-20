@@ -15,11 +15,6 @@ import (
 	"net/http"
 )
 
-func init() {
-	log.SetPrefix("[API-Backend Service] ")
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
 // @title Echo Swagger Example API
 // @version 1.0
 // @description This is a sample server server.
@@ -35,6 +30,10 @@ func init() {
 // @host localhost:3000
 // @BasePath /
 // @schemes http
+
+// @securityDefinitions.apikey Authorization
+// @in header
+// @name Authorization
 func main() {
 	sqlx, err := conn.InitSqlx(config.GlobalEnv.SQLXDatabase)
 	if err != nil {

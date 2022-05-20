@@ -27,11 +27,13 @@ type PageFetchInput struct {
 // @Param        isQuery    query     boolean  false  "if isQuery is true, the sql query statement is fetched directly from the path table"
 // @Param        isDistinct    query     boolean  false  " DISTINCT statement is used to return only distinct (different) values. "
 // @Param        colls    query     string  false  "column name (ex : username, email)"
+// @Param        query    query     string  false  "where condition query sql"
 // @Param        pageSize    query     int  false  "limit per page"
 // @Param        pageNo    query     int  false  "page number list data "
 // @Param        sortBy    query     string  false  "sorting data by column name (ex : name ASC / name DESC)"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table} [get]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table} [get]
 func (h *HttpSqlx) Get(c echo.Context) error {
 	var (
 		sqlStatement string

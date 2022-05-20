@@ -18,8 +18,9 @@ import (
 // @Produce      json
 // @Param        table   path    string  true  "Table Name"
 // @Param		 insertRequest body map[string]interface{} true "JSON request body based on column name"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table} [post]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table} [post]
 func (h *HttpSqlx) Post(c echo.Context) error {
 	table := c.Param("table")
 	db := h.db

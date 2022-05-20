@@ -19,8 +19,9 @@ import (
 // @Param        table   path    string  true  "Table Name"
 // @Param        id   path    string  true  "Primary Key"
 // @Param		 updateRequest body map[string]interface{} true "JSON request body based on column name"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table}/{id} [put]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table}/{id} [put]
 func (h *HttpSqlx) Put(c echo.Context) error {
 	table := c.Param("table")
 	id := c.Param("id")

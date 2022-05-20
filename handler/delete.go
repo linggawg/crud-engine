@@ -16,8 +16,9 @@ import (
 // @Produce      json
 // @Param        table   path    string  true  "Table Name"
 // @Param        id   path    string  true  "Primary Key"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table}/{id} [delete]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table}/{id} [delete]
 func (h *HttpSqlx) Delete(c echo.Context) error {
 	table := c.Param("table")
 	db := h.db
