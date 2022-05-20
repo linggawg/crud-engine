@@ -1,4 +1,15 @@
 basePath: /
+definitions:
+  utils.BaseWrapperModel:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
 host: localhost:3000
 info:
   contact:
@@ -29,7 +40,7 @@ paths:
       summary: Show the status of server.
       tags:
       - HealthCheck
-  /{table}:
+  /sql/{table}:
     get:
       consumes:
       - application/json
@@ -54,6 +65,10 @@ paths:
         in: query
         name: colls
         type: string
+      - description: where condition query sql
+        in: query
+        name: query
+        type: string
       - description: limit per page
         in: query
         name: pageSize
@@ -72,8 +87,9 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
       summary: Find all Data
       tags:
       - CrudEngine
@@ -100,12 +116,13 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
       summary: Insert Data
       tags:
       - CrudEngine
-  /{table}/{id}:
+  /sql/{table}/{id}:
     delete:
       consumes:
       - application/json
@@ -127,8 +144,9 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
       summary: Delete Data
       tags:
       - CrudEngine
@@ -161,11 +179,17 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
       summary: Update Data
       tags:
       - CrudEngine
 schemes:
 - http
+securityDefinitions:
+  Authorization:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

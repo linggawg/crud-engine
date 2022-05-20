@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"crud-engine/pkg/utils"
 	"encoding/json"
-	"fmt"
+	"log"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -25,13 +27,19 @@ type PageFetchInput struct {
 // @Param        isQuery    query     boolean  false  "if isQuery is true, the sql query statement is fetched directly from the path table"
 // @Param        isDistinct    query     boolean  false  " DISTINCT statement is used to return only distinct (different) values. "
 // @Param        colls    query     string  false  "column name (ex : username, email)"
+// @Param        query    query     string  false  "where condition query sql"
 // @Param        pageSize    query     int  false  "limit per page"
 // @Param        pageNo    query     int  false  "page number list data "
 // @Param        sortBy    query     string  false  "sorting data by column name (ex : name ASC / name DESC)"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table} [get]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table} [get]
 func (h *HttpSqlx) Get(c echo.Context) error {
-	var sqlStatement string
+	var (
+		sqlStatement string
+		sqlTotal     string
+	)
+	table := c.Param("table")
 	db := h.db
 
 	pagination, err := getPagination(c)
@@ -41,9 +49,9 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 
 	isQuery := c.QueryParam("isQuery")
 	if isQuery == "true" {
-		sqlStatement = c.Param("table")
+		sqlStatement = table
+		sqlTotal = table
 	} else {
-		table := c.Param("table")
 		primaryKey, err := getPrimaryKey(db, table, c)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
@@ -65,19 +73,27 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		}
 
 		sqlStatement = "SELECT " + isDistinct + colls + " FROM " + table + query
+		sqlTotal = sqlStatement
 		sqlStatement = setQueryPagination(sqlStatement, primaryKey, pagination)
 	}
-	fmt.Println(sqlStatement)
+	var totalItems int64
+	err = db.QueryRow("SELECT COUNT(total) FROM (" + sqlTotal + ") total").Scan(&totalItems)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
 
 	rows, err := db.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	count := len(columns)
@@ -105,12 +121,29 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		tableData = append(tableData, entry)
 	}
 
-	jsonData, err := json.Marshal(tableData)
+	_, err = json.Marshal(tableData)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
-	return c.String(http.StatusOK, string(jsonData))
+	result := map[string]interface{}{
+		"content":       tableData,
+		"totalElements": totalItems,
+		"maxPage": func() *float64 {
+			//
+			if pagination.Size != nil {
+				maxPage := math.Ceil(float64(totalItems)/float64(*pagination.Size)) - 1
+				return &maxPage
+			} else {
+				return nil
+			}
+		}(),
+		"page": pagination.Page,
+		"size": pagination.Size,
+	}
+
+	return utils.Response(result, "List table "+table, http.StatusOK, c)
 }
 
 func setQueryPagination(query string, primaryKey string, p *PageFetchInput) (newQuery string) {

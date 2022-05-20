@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"crud-engine/pkg/utils"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -16,8 +18,9 @@ import (
 // @Produce      json
 // @Param        table   path    string  true  "Table Name"
 // @Param		 insertRequest body map[string]interface{} true "JSON request body based on column name"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table} [post]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table} [post]
 func (h *HttpSqlx) Post(c echo.Context) error {
 	table := c.Param("table")
 	db := h.db
@@ -25,7 +28,8 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	var jsonBody map[string]interface{}
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	var columns string
@@ -38,18 +42,20 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	}
 	columns = strings.TrimRight(columns, ", ")
 	values = strings.TrimRight(values, ", ")
-	sqlStatement := "INSERT " + table + " (" + columns + ") VALUES (" + values + ")"
+	sqlStatement := "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ")"
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	result, err := stmt.Exec()
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	resultId, _ := result.LastInsertId()
-	return c.JSON(http.StatusOK, resultId)
+	return utils.Response(resultId, "successfully insert "+table, http.StatusOK, c)
 }

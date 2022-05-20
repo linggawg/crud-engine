@@ -30,6 +30,10 @@ import (
 // @host localhost:3000
 // @BasePath /
 // @schemes http
+
+// @securityDefinitions.apikey Authorization
+// @in header
+// @name Authorization
 func main() {
 	sqlx, err := conn.InitSqlx(config.GlobalEnv.SQLXDatabase)
 	if err != nil {
@@ -48,7 +52,7 @@ func main() {
 	e := echo.New()
 
 	//// Middleware
-	e.Use(middleware.Logger())
+	//e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
@@ -57,18 +61,13 @@ func main() {
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	//initiate auth http handler
-	authGroup := e.Group("")
-	users.New(sqlx).Mount(authGroup)
+	users.New(sqlx).Mount(e.Group(""))
 
 	//initiate user http handler
-	crudGroup := e.Group("/sql")
-	crudSQLX := handler.New(sqlx)
-	crudSQLX.Mount(crudGroup)
+	handler.New(sqlx).Mount(e.Group("/sql"))
 
 	//initiate mongo http handler
-	crudMongo := e.Group("/mongodb")
-	handlerMongo := mongocontroller.New(mongoDb)
-	handlerMongo.Mount(crudMongo)
+	mongocontroller.New(mongoDb).Mount(e.Group("/mongodb"))
 
 	listenerPort := fmt.Sprintf(":%d", config.GlobalEnv.HTTPPort)
 	log.Println("Webserver successfully started")

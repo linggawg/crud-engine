@@ -49,8 +49,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/{table}": {
+        "/sql/{table}": {
             "get": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
                 "description": "Find all data by statement parameter",
                 "consumes": [
                     "application/json"
@@ -89,6 +94,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "where condition query sql",
+                        "name": "query",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "limit per page",
                         "name": "pageSize",
@@ -111,13 +122,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
                         }
                     }
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
                 "description": "Insert data by column name in format JSON",
                 "consumes": [
                     "application/json"
@@ -152,15 +167,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
                         }
                     }
                 }
             }
         },
-        "/{table}/{id}": {
+        "/sql/{table}/{id}": {
             "put": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
                 "description": "Update data by ID (primary key) and data by column name in format JSON",
                 "consumes": [
                     "application/json"
@@ -202,13 +221,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
                         }
                     }
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
                 "description": "Delete data by ID (primary key)",
                 "consumes": [
                     "application/json"
@@ -240,12 +263,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
                         }
                     }
                 }
             }
+        }
+    },
+    "definitions": {
+        "utils.BaseWrapperModel": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "Authorization": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

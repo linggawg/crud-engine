@@ -16,7 +16,6 @@ type BaseWrapperModel struct {
 	Data    interface{} `json:"data"`
 	Message string      `json:"message"`
 	Code    int         `json:"code"`
-	Meta    interface{} `json:"meta,omitempty"`
 }
 
 func Response(data interface{}, message string, code int, c echo.Context) error {

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crud-engine/pkg/utils"
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -14,8 +16,9 @@ import (
 // @Produce      json
 // @Param        table   path    string  true  "Table Name"
 // @Param        id   path    string  true  "Primary Key"
-// @Success      200  {object} map[string]interface{}
-// @Router       /{table}/{id} [delete]
+// @Security Authorization
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /sql/{table}/{id} [delete]
 func (h *HttpSqlx) Delete(c echo.Context) error {
 	table := c.Param("table")
 	db := h.db
@@ -23,21 +26,25 @@ func (h *HttpSqlx) Delete(c echo.Context) error {
 	id := c.Param("id")
 	key, err := getPrimaryKey(db, table, c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	sqlStatement := "DELETE FROM " + table + " WHERE " + key + " ='" + id + "'"
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	result, err := stmt.Exec()
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	resultId, _ := result.LastInsertId()
-	return c.JSON(http.StatusOK, resultId)
+	message := "successfully update " + table + " with Id " + id
+	return utils.Response(resultId, message, http.StatusOK, c)
 }
