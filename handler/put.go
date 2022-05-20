@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"crud-engine/pkg/utils"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -27,12 +29,14 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	var jsonBody map[string]interface{}
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	primaryKey, err := getPrimaryKey(db, table, c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	var setData string
@@ -45,14 +49,17 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	result, err := stmt.Exec()
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	resultId, _ := result.LastInsertId()
-	return c.JSON(http.StatusOK, resultId)
+	message := "successfully update " + table + " with Id " + id
+	return utils.Response(resultId, message, http.StatusOK, c)
 }
