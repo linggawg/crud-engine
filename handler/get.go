@@ -76,8 +76,9 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		sqlTotal = sqlStatement
 		sqlStatement = setQueryPagination(sqlStatement, primaryKey, pagination)
 	}
+
 	var totalItems int64
-	err = db.QueryRow("SELECT COUNT(total) FROM (" + sqlTotal + ") total").Scan(&totalItems)
+	err = db.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
@@ -147,7 +148,6 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 }
 
 func setQueryPagination(query string, primaryKey string, p *PageFetchInput) (newQuery string) {
-
 	if p != nil {
 		if p.Sort != "" {
 			query += " ORDER BY " + p.Sort
