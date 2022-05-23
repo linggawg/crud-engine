@@ -24,17 +24,10 @@ import (
 // @Router       /sql/{table}/{id} [put]
 func (h *HttpSqlx) Put(c echo.Context) error {
 	table := c.Param("table")
-	id := c.Param("id")
 	db := h.db
 
 	var jsonBody map[string]interface{}
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
-	}
-
-	primaryKey, err := getPrimaryKey(db, table, c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
@@ -46,7 +39,9 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	}
 	setData = strings.TrimRight(setData, ", ")
 
-	sqlStatement := "UPDATE " + table + " SET " + setData + " WHERE " + primaryKey + "='" + id + "'"
+	value := c.Param("value")
+	field := c.QueryParam("field_id")
+	sqlStatement := "UPDATE " + table + " SET " + setData + " WHERE " + field + " ='" + value + "'"
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
@@ -61,6 +56,6 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	}
 
 	resultId, _ := result.LastInsertId()
-	message := "successfully update " + table + " with Id " + id
+	message := "successfully update "  + table + " with " + field + " " + value
 	return utils.Response(resultId, message, http.StatusOK, c)
 }

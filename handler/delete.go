@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crud-engine/pkg/utils"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -23,14 +24,10 @@ func (h *HttpSqlx) Delete(c echo.Context) error {
 	table := c.Param("table")
 	db := h.db
 
-	id := c.Param("id")
-	key, err := getPrimaryKey(db, table, c)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
-	}
-
-	sqlStatement := "DELETE FROM " + table + " WHERE " + key + " ='" + id + "'"
+	value := c.Param("value")
+	field := c.QueryParam("field_id")
+	sqlStatement := "DELETE FROM " + table + " WHERE " + field + " ='" + value + "'"
+	fmt.Println(sqlStatement)
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
@@ -45,6 +42,6 @@ func (h *HttpSqlx) Delete(c echo.Context) error {
 	}
 
 	resultId, _ := result.LastInsertId()
-	message := "successfully update " + table + " with Id " + id
+	message := "successfully delete " + table + " with " + field + " " + value
 	return utils.Response(resultId, message, http.StatusOK, c)
 }
