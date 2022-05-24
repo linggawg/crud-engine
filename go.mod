@@ -12,6 +12,7 @@ require (
 	github.com/lib/pq v1.2.0
 	github.com/swaggo/echo-swagger v1.3.2
 	github.com/swaggo/swag v1.8.2
+	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/crypto v0.0.0-20220517005047-85d78b3ac167
 	gopkg.in/guregu/null.v4 v4.0.0
@@ -41,7 +42,6 @@ require (
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
-	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	golang.org/x/net v0.0.0-20220517181318-183a9ca12b87 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect

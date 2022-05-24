@@ -6,14 +6,15 @@ import (
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/guregu/null.v4"
-	"log"
-	"net/http"
-	"time"
 )
 
 type HttpSqlx struct {
@@ -30,6 +31,15 @@ func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
 	echoGroup.POST("/register", h.RegisterUser, middleware.NoAuth())
 }
 
+// Post Login godoc
+// @Summary      Login
+// @Description  Login api
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param		 insertRequest body models.ReqLogin true "JSON request body based on column name"
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /login [post]
 // Login function
 func (h *HttpSqlx) Login(c echo.Context) error {
 	var (
@@ -88,6 +98,15 @@ func (s *HttpSqlx) GetByEmail(ctx context.Context, email string) (user *models.U
 	return &u, nil
 }
 
+// Post RegisterUser godoc
+// @Summary      Register
+// @Description  Register new user for login
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param		 insertRequest body models.ReqUser true "JSON request body based on column name"
+// @Success      200  {object} utils.BaseWrapperModel
+// @Router       /register [post]
 func (s *HttpSqlx) RegisterUser(c echo.Context) error {
 	var (
 		params models.ReqUser
