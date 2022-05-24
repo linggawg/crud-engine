@@ -12,6 +12,7 @@ require (
 	github.com/lib/pq v1.2.0
 	github.com/swaggo/echo-swagger v1.3.2
 	github.com/swaggo/swag v1.8.2
+	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/crypto v0.0.0-20220517005047-85d78b3ac167
 	gopkg.in/guregu/null.v4 v4.0.0
