@@ -3,6 +3,7 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"github.com/xwb1989/sqlparser"
 	"log"
 	"math"
 	"net/http"
@@ -58,7 +59,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		primaryKey, err := getPrimaryKey(db, table, c)
 		if err != nil {
 			log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 		}
 
 		isDistinct := ""
@@ -79,6 +80,11 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		sqlStatement = "SELECT " + isDistinct + colls + " FROM " + table + query
 		sqlTotal = sqlStatement
 		sqlStatement = setQueryPagination(sqlStatement, primaryKey, pagination)
+	}
+	_, err = sqlparser.Parse(sqlStatement)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	var totalItems int64
