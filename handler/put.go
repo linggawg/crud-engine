@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -23,6 +24,7 @@ import (
 // @Success      200  {object} utils.BaseWrapperModel
 // @Router       /sql/{table}/{id} [put]
 func (h *HttpSqlx) Put(c echo.Context) error {
+	errorMessage := os.Getenv("PUT_ERROR_MESSAGE")
 	table := c.Param("table")
 	db := h.db
 
@@ -30,7 +32,7 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	var setData string
@@ -46,13 +48,13 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	result, err := stmt.Exec()
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	resultId, _ := result.LastInsertId()

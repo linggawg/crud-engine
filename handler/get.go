@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -35,6 +36,7 @@ type PageFetchInput struct {
 // @Success      200  {object} utils.BaseWrapperModel
 // @Router       /sql/{table} [get]
 func (h *HttpSqlx) Get(c echo.Context) error {
+	errorMessage := os.Getenv("GET_ERROR_MESSAGE")
 	var (
 		sqlStatement string
 		sqlTotal     string
@@ -44,7 +46,8 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 
 	pagination, err := getPagination(c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	isQuery := c.QueryParam("isQuery")
@@ -54,7 +57,8 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	} else {
 		primaryKey, err := getPrimaryKey(db, table, c)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, err.Error())
+			log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 		}
 
 		isDistinct := ""
@@ -81,20 +85,20 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	err = db.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	rows, err := db.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	count := len(columns)
@@ -125,7 +129,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	_, err = json.Marshal(tableData)
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	result := map[string]interface{}{

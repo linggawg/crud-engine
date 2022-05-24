@@ -2,9 +2,9 @@ package handler
 
 import (
 	"crud-engine/pkg/utils"
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/labstack/echo/v4"
 )
@@ -21,24 +21,24 @@ import (
 // @Success      200  {object} utils.BaseWrapperModel
 // @Router       /sql/{table}/{id} [delete]
 func (h *HttpSqlx) Delete(c echo.Context) error {
+	errorMessage := os.Getenv("DELETE_ERROR_MESSAGE")
 	table := c.Param("table")
 	db := h.db
-
+	
 	value := c.Param("value")
 	field := c.QueryParam("field_id")
 	sqlStatement := "DELETE FROM " + table + " WHERE " + field + " ='" + value + "'"
-	fmt.Println(sqlStatement)
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	result, err := stmt.Exec()
 	if err != nil {
 		log.Println(err)
-		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
 	resultId, _ := result.LastInsertId()
