@@ -3,12 +3,12 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/labstack/echo/v4"
 )
 
 // Post UpdateData godoc
@@ -34,17 +34,13 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	var columns string
-	var values string
-	for key := range jsonBody {
-		columns += key + ", "
-		values += "'"
-		values += jsonBody[key].(string)
-		values += "', "
+	primaryKey, err := getPrimaryKey(db, table, c)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	columns = strings.TrimRight(columns, ", ")
-	values = strings.TrimRight(values, ", ")
-	sqlStatement := "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ")"
+	columns, values := sqlStatement(primaryKey, jsonBody)
+	sqlStatement := "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ");"
 
 	stmt, err := db.Prepare(sqlStatement)
 	if err != nil {
@@ -59,4 +55,18 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	}
 
 	return utils.Response(jsonBody, "successfully insert "+table, http.StatusCreated, c)
+}
+
+func sqlStatement(primaryKey *PrimaryKey, jsonBody map[string]interface{}) (columns string, values string) {
+	for key := range jsonBody {
+		if key != primaryKey.column {
+			columns += key + ", "
+			values += "'" + jsonBody[key].(string) + "', "
+		}
+	}
+	if !strings.Contains(columns, primaryKey.column) && "int" != primaryKey.format {
+		columns += primaryKey.column + ", "
+		values += "'" + uuid.New().String() + "', "
+	}
+	return strings.TrimRight(columns, ", "), strings.TrimRight(values, ", ")
 }
