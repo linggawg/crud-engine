@@ -3,12 +3,14 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
-	"github.com/xwb1989/sqlparser"
 	"log"
 	"math"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/xwb1989/sqlparser"
 
 	"github.com/labstack/echo/v4"
 )
@@ -62,14 +64,18 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 		}
 
-		isDistinct := ""
-		if c.QueryParam("isDistinct") == "true" {
+		isDistinct := c.QueryParam("isDistinct")
+		if  isDistinct == "true" {
 			isDistinct = "DISTINCT "
 		}
 
-		query := ""
-		if c.QueryParam("query") != "" {
-			query = " WHERE " + c.QueryParam("query")
+		query := c.QueryParam("query")
+		if !sqlValidation(query) {
+			log.Println("query can be potential as sql injection")
+			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+		}
+		if query != ""{
+			query = " WHERE " + query
 		}
 
 		colls := c.QueryParam("colls")
@@ -142,7 +148,6 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		"content":       tableData,
 		"totalElements": totalItems,
 		"maxPage": func() *float64 {
-			//
 			if pagination.Size != nil {
 				maxPage := math.Ceil(float64(totalItems)/float64(*pagination.Size)) - 1
 				return &maxPage
@@ -207,4 +212,20 @@ func getPagination(c echo.Context) (p *PageFetchInput, e error) {
 		Sort: getParam.Get("sortBy"),
 	}
 	return p, nil
+}
+
+func sqlValidation (sql string) bool {
+	if strings.Contains(`""=""`, sql) {
+        return false
+    }
+	if strings.Contains("--", sql) {
+        return false
+    } 
+	if strings.Contains("drop", sql) {
+        return false
+    }
+	if strings.Contains("union", sql) {
+        return false
+    }
+	return true
 }
