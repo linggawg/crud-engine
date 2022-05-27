@@ -52,12 +52,11 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	result, err := stmt.Exec()
+	_, err = stmt.Exec()
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	resultId, _ := result.LastInsertId()
-	return utils.Response(resultId, "successfully insert "+table, http.StatusOK, c)
+	return utils.Response(jsonBody, "successfully insert "+table, http.StatusCreated, c)
 }
