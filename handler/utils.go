@@ -4,17 +4,24 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"os"
+	"strings"
 )
 
-func getPrimaryKey(db *sqlx.DB, table string, c echo.Context) (key string, err error) {
+func getPrimaryKey(db *sqlx.DB, table string, c echo.Context) (p *PrimaryKey, err error) {
+	var primarykey PrimaryKey
 	if os.Getenv("DB_DIALECT") == "mysql" {
 		var keyMysql KeyMySQL
 		sql := "show columns from " + table + " where `Key` = 'PRI'"
 		err = db.GetContext(c.Request().Context(), &keyMysql, sql)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return keyMysql.Field, nil
+		primarykey.column = keyMysql.Field
+		if strings.Contains(keyMysql.TypeData, "int") {
+			primarykey.format = "int"
+		} else {
+			primarykey.format = "varchar"
+		}
 	} else if os.Getenv("DB_DIALECT") == "postgres" {
 		var keyPostgres KeyPostgres
 		sql := "SELECT pg_attribute.attname, format_type(pg_attribute.atttypid, pg_attribute.atttypmod) " +
@@ -26,11 +33,21 @@ func getPrimaryKey(db *sqlx.DB, table string, c echo.Context) (key string, err e
 			"AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary"
 		err = db.GetContext(c.Request().Context(), &keyPostgres, sql)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return keyPostgres.Attname, err
+		primarykey.column = keyPostgres.Attname
+		if strings.Contains(keyPostgres.FormatType, "int") {
+			primarykey.format = "int"
+		} else {
+			primarykey.format = "varchar"
+		}
 	}
-	return "", err
+	return &primarykey, err
+}
+
+type PrimaryKey struct {
+	column string
+	format string
 }
 
 type KeyPostgres struct {

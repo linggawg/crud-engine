@@ -65,7 +65,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		}
 
 		isDistinct := c.QueryParam("isDistinct")
-		if  isDistinct == "true" {
+		if isDistinct == "true" {
 			isDistinct = "DISTINCT "
 		}
 
@@ -74,7 +74,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 			log.Println("query can be potential as sql injection")
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 		}
-		if query != ""{
+		if query != "" {
 			query = " WHERE " + query
 		}
 
@@ -85,7 +85,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 
 		sqlStatement = "SELECT " + isDistinct + colls + " FROM " + table + query
 		sqlTotal = sqlStatement
-		sqlStatement = setQueryPagination(sqlStatement, primaryKey, pagination)
+		sqlStatement = setQueryPagination(sqlStatement, primaryKey.column, pagination)
 	}
 	_, err = sqlparser.Parse(sqlStatement)
 	if err != nil {
@@ -214,18 +214,18 @@ func getPagination(c echo.Context) (p *PageFetchInput, e error) {
 	return p, nil
 }
 
-func sqlValidation (sql string) bool {
+func sqlValidation(sql string) bool {
 	if strings.Contains(`""=""`, sql) {
-        return false
-    }
+		return false
+	}
 	if strings.Contains("--", sql) {
-        return false
-    } 
+		return false
+	}
 	if strings.Contains("drop", sql) {
-        return false
-    }
+		return false
+	}
 	if strings.Contains("union", sql) {
-        return false
-    }
+		return false
+	}
 	return true
 }
