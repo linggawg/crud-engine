@@ -69,13 +69,16 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 			isDistinct = "DISTINCT "
 		}
 
-		query := c.QueryParam("query")
-		if !sqlValidation(query) {
-			log.Println("query can be potential as sql injection")
-			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-		}
-		if query != "" {
-			query = " WHERE " + query
+		query := ""
+		if c.QueryParams().Has("query"){
+			query = c.QueryParam("query")
+			if !sqlValidation(query) {
+				log.Println("query can be potential as sql injection")
+				return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+			}
+			if query != "" {
+				query = " WHERE " + query
+			}
 		}
 
 		colls := c.QueryParam("colls")

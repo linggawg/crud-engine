@@ -3,12 +3,13 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 )
 
 // Post UpdateData godoc
@@ -42,13 +43,7 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	columns, values := sqlStatement(primaryKey, jsonBody)
 	sqlStatement := "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ");"
 
-	stmt, err := db.Prepare(sqlStatement)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-	}
-
-	_, err = stmt.Exec()
+	_, err = db.ExecContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

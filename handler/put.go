@@ -45,19 +45,12 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	field := c.QueryParam("field_id")
 	sqlStatement := "UPDATE " + table + " SET " + setData + " WHERE " + field + " ='" + value + "'"
 
-	stmt, err := db.Prepare(sqlStatement)
+	_, err = db.ExecContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	result, err := stmt.Exec()
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-	}
-
-	resultId, _ := result.LastInsertId()
-	message := "successfully update "  + table + " with " + field + " " + value
-	return utils.Response(resultId, message, http.StatusOK, c)
+	message := "successfully update " + table + " with " + field + " " + value
+	return utils.Response(jsonBody, message, http.StatusOK, c)
 }
