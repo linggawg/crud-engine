@@ -8,11 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
-
-	"github.com/xwb1989/sqlparser"
 
 	"github.com/labstack/echo/v4"
+	"github.com/xwb1989/sqlparser"
 )
 
 type PageFetchInput struct {
@@ -53,8 +51,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	isQuery := c.QueryParam("isQuery")
-	if isQuery == "true" {
+	if c.QueryParam("isQuery") == "true" {
 		sqlStatement = table
 		sqlTotal = table
 	} else {
@@ -69,16 +66,9 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 			isDistinct = "DISTINCT "
 		}
 
-		query := ""
-		if c.QueryParams().Has("query"){
-			query = c.QueryParam("query")
-			if !sqlValidation(query) {
-				log.Println("query can be potential as sql injection")
-				return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-			}
-			if query != "" {
-				query = " WHERE " + query
-			}
+		query := c.QueryParam("query")
+		if query != "" {
+			query = " WHERE " + query
 		}
 
 		colls := c.QueryParam("colls")
@@ -90,6 +80,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		sqlTotal = sqlStatement
 		sqlStatement = setQueryPagination(sqlStatement, primaryKey.column, pagination)
 	}
+
 	_, err = sqlparser.Parse(sqlStatement)
 	if err != nil {
 		log.Println(err)
@@ -215,20 +206,4 @@ func getPagination(c echo.Context) (p *PageFetchInput, e error) {
 		Sort: getParam.Get("sortBy"),
 	}
 	return p, nil
-}
-
-func sqlValidation(sql string) bool {
-	if strings.Contains(`""=""`, sql) {
-		return false
-	}
-	if strings.Contains("--", sql) {
-		return false
-	}
-	if strings.Contains("drop", sql) {
-		return false
-	}
-	if strings.Contains("union", sql) {
-		return false
-	}
-	return true
 }
