@@ -3,6 +3,7 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -36,8 +37,22 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 	}
 
 	var setData string
+	informationSchemas, err := sqlIsNullable(db, table, c)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
 	for key := range jsonBody {
-		setData += key + "='" + jsonBody[key].(string) + "', "
+		if jsonBody[key] == nil {
+			for _, i := range informationSchemas {
+				if i.ColumName == key && i.IsNullable == "NO" {
+					errM := fmt.Sprintf(", Error:validation for '%s' failed on the 'required' tag", i.ColumName)
+					log.Println(errorMessage)
+					return utils.Response(nil, errorMessage+errM, http.StatusBadRequest, c)
+				}
+			}
+		}
+		setData += key + fmt.Sprintf("='%s', ", jsonBody[key])
 	}
 	setData = strings.TrimRight(setData, ", ")
 

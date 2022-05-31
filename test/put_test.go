@@ -16,7 +16,7 @@ import (
 )
 
 func TestPut(t *testing.T) {
-	responsePutJSON := `{"success":true,"data":0,"message":"successfully update province with id 99","code":200}
+	responsePutJSON := `{"success":true,"data":{"created_by":"system","created_date":"2022-05-27 09:45:06","id":"99","is_deleted":"0","name":"TEST PUT PROVINCE"},"message":"successfully update province with name TEST PUT PROVINCE","code":200}
 `
 	putJSON := `{"created_by": "system","created_date": "2022-05-27 09:45:06","id": "99","is_deleted": "0","name": "TEST PUT PROVINCE"}`
 
@@ -25,9 +25,9 @@ func TestPut(t *testing.T) {
 		panic(err)
 	}
 	log.Println("Database successfully initialized")
-	
+
 	q := make(url.Values)
-	q.Set("field_id", "id")
+	q.Set("field_id", "name")
 
 	// Setup
 	e := echo.New()
@@ -36,7 +36,7 @@ func TestPut(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("table", "value")
-	c.SetParamValues("province", "99")
+	c.SetParamValues("province", "TEST PUT PROVINCE")
 
 	if assert.NoError(t, handler.New(sqlx).Put(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)

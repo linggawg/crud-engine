@@ -16,7 +16,7 @@ type Env struct {
 // GlobalEnv global environment
 var GlobalEnv Env
 
-func init() {
+func Init() {
 	errEnv := godotenv.Load()
 	if errEnv != nil {
 		panic("Failed to load env file. Make sure .env file is exists!")

@@ -15,6 +15,11 @@ import (
 	"net/http"
 )
 
+func init() {
+	log.SetPrefix("[API-CRUD ENGINE SERVICE] ")
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 // @title Echo Swagger Example API
 // @version 1.0
 // @description This is a sample server server.
@@ -35,6 +40,7 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	config.Init()
 	sqlx, err := conn.InitSqlx(config.GlobalEnv.SQLXDatabase)
 	if err != nil {
 		panic(err)
