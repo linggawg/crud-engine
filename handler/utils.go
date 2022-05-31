@@ -7,9 +7,45 @@ import (
 	"strings"
 )
 
+type InformationSchema struct {
+	ColumName  string `db:"column_name"`
+	IsNullable string `db:"is_nullable"`
+}
+
+func sqlIsNullable(db *sqlx.DB, table string, c echo.Context) (informationSchema []InformationSchema, err error) {
+	var (
+		is      []InformationSchema
+		sql     string
+		args    []interface{}
+		dialect = os.Getenv("DB_DIALECT")
+	)
+
+	if dialect == "mysql" {
+		sql = "SELECT column_name, is_nullable " +
+			"FROM information_schema.COLUMNS " +
+			"WHERE table_schema = DATABASE () AND table_name = ? " +
+			"ORDER BY table_name, ordinal_position;"
+	} else if dialect == "postgres" {
+		sql = "SELECT column_name, is_nullable " +
+			"FROM information_schema.columns " +
+			"WHERE table_schema = current_schema() " +
+			"AND table_name = $1 " +
+			"order by table_name,ordinal_position; "
+	}
+	args = append(args, table)
+	err = db.SelectContext(c.Request().Context(), &is, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	return is, nil
+}
 func getPrimaryKey(db *sqlx.DB, table string, c echo.Context) (p *PrimaryKey, err error) {
-	var primarykey PrimaryKey
-	if os.Getenv("DB_DIALECT") == "mysql" {
+	var (
+		primarykey PrimaryKey
+		dialect    = os.Getenv("DB_DIALECT")
+	)
+
+	if dialect == "mysql" {
 		var keyMysql KeyMySQL
 		sql := "show columns from " + table + " where `Key` = 'PRI'"
 		err = db.GetContext(c.Request().Context(), &keyMysql, sql)
@@ -22,7 +58,7 @@ func getPrimaryKey(db *sqlx.DB, table string, c echo.Context) (p *PrimaryKey, er
 		} else {
 			primarykey.format = "varchar"
 		}
-	} else if os.Getenv("DB_DIALECT") == "postgres" {
+	} else if dialect == "postgres" {
 		var keyPostgres KeyPostgres
 		sql := "SELECT pg_attribute.attname, format_type(pg_attribute.atttypid, pg_attribute.atttypmod) " +
 			"FROM pg_index, pg_class, pg_attribute, pg_namespace " +
