@@ -3,6 +3,7 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -40,7 +41,16 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	columns, values := sqlStatement(primaryKey, jsonBody)
+	informationSchemas, err := sqlIsNullable(db, table, c)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	columns, values, errM := sqlStatement(primaryKey, jsonBody, informationSchemas)
+	if errM != "" {
+		log.Println(errM)
+		return utils.Response(nil, errorMessage+errM, http.StatusBadRequest, c)
+	}
 	sqlStatement := "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ");"
 
 	_, err = db.ExecContext(c.Request().Context(), sqlStatement)
@@ -52,16 +62,24 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	return utils.Response(jsonBody, "successfully insert "+table, http.StatusCreated, c)
 }
 
-func sqlStatement(primaryKey *PrimaryKey, jsonBody map[string]interface{}) (columns string, values string) {
+func sqlStatement(primaryKey *PrimaryKey, jsonBody map[string]interface{}, informationSchemas []InformationSchema) (columns string, values string, err string) {
 	for key := range jsonBody {
 		if key != primaryKey.column {
 			columns += key + ", "
-			values += "'" + jsonBody[key].(string) + "', "
+			values += fmt.Sprintf("'%s', ", jsonBody[key])
 		}
 	}
 	if !strings.Contains(columns, primaryKey.column) && "int" != primaryKey.format {
 		columns += primaryKey.column + ", "
 		values += "'" + uuid.New().String() + "', "
 	}
-	return strings.TrimRight(columns, ", "), strings.TrimRight(values, ", ")
+	for _, i := range informationSchemas {
+		if i.IsNullable == "NO" && i.ColumName != primaryKey.column {
+			if !strings.Contains(columns, i.ColumName) {
+				errorMessage := fmt.Sprintf(", Error:validation for '%s' failed on the 'required' tag", i.ColumName)
+				return "", "", errorMessage
+			}
+		}
+	}
+	return strings.TrimRight(columns, ", "), strings.TrimRight(values, ", "), ""
 }
