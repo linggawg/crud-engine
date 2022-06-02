@@ -37,6 +37,14 @@ type PageFetchInput struct {
 // @Success      200  {object} utils.BaseWrapperModel
 // @Router       /sql/{table} [get]
 func (h *HttpSqlx) Get(c echo.Context) error {
+	//get path table: nama table/query
+	//get userdId: token
+	
+	//get data service: nama table(service_url) + method
+	//get data service: query + method
+	//get data dbs: serviceId
+	//get data user: userId
+	//get data user_service: serviceId + userId
 	errorMessage := os.Getenv("GET_ERROR_MESSAGE")
 	var (
 		sqlStatement string
