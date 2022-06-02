@@ -6,6 +6,7 @@ import (
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"time"
@@ -67,7 +68,7 @@ func (h *HttpSqlx) Login(c echo.Context) error {
 		return utils.Response(nil, "Invalid Username or Password", http.StatusBadRequest, c)
 	}
 
-	token, err := middleware.CreateToken(user.Username)
+	token, err := middleware.CreateToken(user.ID)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
@@ -84,12 +85,11 @@ func (s *HttpSqlx) GetByEmail(ctx context.Context, email string) (user *models.U
 		password,
 		created_at,
 		created_by,
-		updated_at,
-		last_update_by,
-		is_deleted
+		modified_at,
+		modified_by
 	FROM
 		users
-	WHERE is_deleted = false AND email = $1
+	WHERE email = $1
 		`
 	err = s.db.GetContext(ctx, &u, query, email)
 	if err != nil {
@@ -154,25 +154,25 @@ func (s *HttpSqlx) Insert(ctx context.Context, user *models.User) (err error) {
 	query := `
 	INSERT INTO users
 		(
+		 	id,
 			username,
 			email,
 			password,
 			created_at,
 			created_by,
-			last_update_by,
-			updated_at,
-			is_deleted
+		 	modified_at,
+			modified_by
 		) 
 		VALUES 
 		(
+		 	:id,
 			:username,
 			:email,
 			:password,
 			:created_at,
 			:created_by,
-			:last_update_by,
-			:updated_at,
-			:is_deleted
+		 	:modified_at,
+			:modified_by
 		) RETURNING id ;
 	`
 	tx, err := s.db.Beginx()
@@ -181,13 +181,14 @@ func (s *HttpSqlx) Insert(ctx context.Context, user *models.User) (err error) {
 	}
 	defer tx.Rollback()
 	res, err := s.db.NamedQueryContext(ctx, query, &models.User{
-		Username:     user.Username,
-		Email:        user.Email,
-		Password:     user.Password,
-		CreatedAt:    user.CreatedAt,
-		CreatedBy:    user.CreatedBy,
-		ModifiedAt:   user.CreatedAt,
-		ModifiedBy:	 &user.CreatedBy,
+		ID:         uuid.New().String(),
+		Username:   user.Username,
+		Email:      user.Email,
+		Password:   user.Password,
+		CreatedAt:  user.CreatedAt,
+		CreatedBy:  user.CreatedBy,
+		ModifiedAt: user.CreatedAt,
+		ModifiedBy: &user.CreatedBy,
 	})
 	if err != nil {
 		return err

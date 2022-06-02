@@ -97,6 +97,25 @@ func ExtractToken(r *http.Request) string {
 	return ""
 }
 
+// ExtractTokenID . . .
+func ExtractTokenID(r *http.Request) (string, error) {
+	tokenString := ExtractToken(r)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(os.Getenv("API_SECRET")), nil
+	})
+	if err != nil {
+		return "", err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		return claims["sub"].(string), nil
+	}
+	return "", nil
+}
+
 func Pretty(data interface{}) {
 	_, err := json.MarshalIndent(data, "", " ")
 	if err != nil {

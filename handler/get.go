@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"log"
@@ -52,6 +53,14 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	)
 	table := c.Param("table")
 	db := h.db
+
+	// Get User Id Token
+	uuid, err := middleware.ExtractTokenID(c.Request())
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	log.Println("ID : ", uuid)
 
 	pagination, err := getPagination(c)
 	if err != nil {
