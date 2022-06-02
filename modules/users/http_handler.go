@@ -139,7 +139,6 @@ func (s *HttpSqlx) RegisterUser(c echo.Context) error {
 		Password:  password,
 		CreatedBy: params.UserId,
 		CreatedAt: null.TimeFrom(time.Now()),
-		IsDeleted: false,
 	}
 	err = s.Insert(c.Request().Context(), user)
 	if err != nil {
@@ -187,9 +186,8 @@ func (s *HttpSqlx) Insert(ctx context.Context, user *models.User) (err error) {
 		Password:     user.Password,
 		CreatedAt:    user.CreatedAt,
 		CreatedBy:    user.CreatedBy,
-		UpdatedAt:    user.CreatedAt,
-		LastUpdateBy: &user.CreatedBy,
-		IsDeleted:    user.IsDeleted,
+		ModifiedAt:   user.CreatedAt,
+		ModifiedBy:	 &user.CreatedBy,
 	})
 	if err != nil {
 		return err

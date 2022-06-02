@@ -17,13 +17,6 @@ func New(db *sqlx.DB) *HttpSqlx {
 
 // Mount function
 func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
-	//for development
-	echoGroup.GET("/dev/:table", h.Get)
-	echoGroup.POST("/dev/:table", h.Post)
-	echoGroup.PUT("/dev/:table/:value", h.Put)
-	echoGroup.PATCH("/dev/:table/:value", h.Put)
-	echoGroup.DELETE("/dev/:table/:value", h.Delete)
-
 	echoGroup.GET("/:table", h.Get, middleware.VerifyBearer())
 	echoGroup.POST("/:table", h.Post, middleware.VerifyBearer())
 	echoGroup.PUT("/:table/:value", h.Put, middleware.VerifyBearer())

@@ -1,9 +1,14 @@
 -- ----------------------------
 -- Table structure for apps
 -- ----------------------------
+DROP TABLE IF EXISTS "apps";
 CREATE TABLE "apps" (
   "id" uuid NOT NULL,
-  "name" varchar(255) COLLATE "pg_catalog"."default"
+  "name" varchar(255) COLLATE "pg_catalog"."default",
+  "created_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+  "created_by" varchar(255) COLLATE "pg_catalog"."default",
+  "modified_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+  "modified_by" varchar(255) COLLATE "pg_catalog"."default"
 );
 -- ----------------------------
 -- Primary Key structure for table apps
@@ -13,6 +18,7 @@ ALTER TABLE "apps" ADD CONSTRAINT "pk_app" PRIMARY KEY ("id");
 -- ----------------------------
 -- Table structure for dbs
 -- ----------------------------
+DROP TABLE IF EXISTS "dbs";
 CREATE TABLE "dbs" (
    "id" uuid NOT NULL,
    "app_id" uuid,
@@ -20,7 +26,11 @@ CREATE TABLE "dbs" (
    "host" varchar(255) COLLATE "pg_catalog"."default",
    "username" varchar(255) COLLATE "pg_catalog"."default",
    "password" varchar(255) COLLATE "pg_catalog"."default",
-   "dialect" varchar(255) COLLATE "pg_catalog"."default"
+   "dialect" varchar(255) COLLATE "pg_catalog"."default",
+   "created_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+   "created_by" varchar(255) COLLATE "pg_catalog"."default",
+   "modified_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+   "modified_by" varchar(255) COLLATE "pg_catalog"."default"
 );
 -- ----------------------------
 -- Primary Key structure for table dbs
@@ -34,13 +44,18 @@ ALTER TABLE "dbs" ADD CONSTRAINT "fk_db_app" FOREIGN KEY ("app_id") REFERENCES "
 -- ----------------------------
 -- Table structure for services
 -- ----------------------------
+DROP TABLE IF EXISTS "services";
 CREATE TABLE "services" (
    "id" uuid NOT NULL,
    "db_id" uuid,
    "method" varchar(255) COLLATE "pg_catalog"."default",
    "service_url" varchar(255) COLLATE "pg_catalog"."default",
    "service_definition" varchar(255) COLLATE "pg_catalog"."default",
-   "is_query" bool
+   "is_query" bool,
+   "created_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+   "created_by" varchar(255) COLLATE "pg_catalog"."default",
+   "modified_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+   "modified_by" varchar(255) COLLATE "pg_catalog"."default"
 );
 -- ----------------------------
 -- Primary Key structure for table services
@@ -54,10 +69,16 @@ ALTER TABLE "services" ADD CONSTRAINT "fk_service_db" FOREIGN KEY ("db_id") REFE
 -- ----------------------------
 -- Table structure for users
 -- ----------------------------
+DROP TABLE IF EXISTS "users";
 CREATE TABLE "users" (
   "id" uuid NOT NULL,
   "username" varchar(255) COLLATE "pg_catalog"."default",
-  "password" varchar(255) COLLATE "pg_catalog"."default"
+  "password" varchar(255) COLLATE "pg_catalog"."default",
+  "email" varchar(255) COLLATE "pg_catalog"."default",
+  "created_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+  "created_by" varchar(255) COLLATE "pg_catalog"."default",
+  "modified_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+  "modified_by" varchar(255) COLLATE "pg_catalog"."default"
 );
 -- ----------------------------
 -- Primary Key structure for table users
@@ -67,10 +88,15 @@ ALTER TABLE "users" ADD CONSTRAINT "pk_user" PRIMARY KEY ("id");
 -- ----------------------------
 -- Table structure for user_service
 -- ----------------------------
+DROP TABLE IF EXISTS "user_service";
 CREATE TABLE "user_service" (
    "id" uuid NOT NULL,
    "user_id" uuid,
-   "service_id" uuid
+   "service_id" uuid,
+   "created_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+   "created_by" varchar(255) COLLATE "pg_catalog"."default",
+   "modified_at" timestamp(0) DEFAULT NULL::timestamp without time zone,
+   "modified_by" varchar(255) COLLATE "pg_catalog"."default"
 );
 -- ----------------------------
 -- Primary Key structure for table user_service
