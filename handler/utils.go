@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"os"
@@ -10,6 +11,19 @@ import (
 type InformationSchema struct {
 	ColumName  string `db:"column_name"`
 	IsNullable string `db:"is_nullable"`
+}
+
+func SetQuery(query string) (newQuery string) {
+	switch os.Getenv("DB_DIALECT") {
+	case "postgres":
+		count := strings.Count(query, "?")
+		for i := 1; i <= count; i++ {
+			query = strings.Replace(query, "?", fmt.Sprintf("$%d", i), 1)
+		}
+		return query
+	default:
+		return query
+	}
 }
 
 func sqlIsNullable(db *sqlx.DB, table string, c echo.Context) (informationSchema []InformationSchema, err error) {

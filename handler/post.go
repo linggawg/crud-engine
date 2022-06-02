@@ -3,6 +3,7 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,12 +26,14 @@ import (
 // @Success      200  {object} utils.BaseWrapperModel
 // @Router       /sql/{table} [post]
 func (h *HttpSqlx) Post(c echo.Context) error {
-	errorMessage := os.Getenv("POST_ERROR_MESSAGE")
-	table := c.Param("table")
-	db := h.db
-
-	var jsonBody map[string]interface{}
-	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
+	var (
+		err          error
+		errorMessage = os.Getenv("POST_ERROR_MESSAGE")
+		db           = h.db
+		table        = c.Param("table")
+		jsonBody     map[string]interface{}
+	)
+	err = json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -46,14 +49,12 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	columns, values, errM := sqlStatement(primaryKey, jsonBody, informationSchemas)
-	if errM != "" {
-		log.Println(errM)
-		return utils.Response(nil, errorMessage+errM, http.StatusBadRequest, c)
+	sqlStatement, args, err := sqlStatementInsert(table, primaryKey, jsonBody, informationSchemas)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage+err.Error(), http.StatusBadRequest, c)
 	}
-	sqlStatement := "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ");"
-
-	_, err = db.ExecContext(c.Request().Context(), sqlStatement)
+	_, err = db.ExecContext(c.Request().Context(), sqlStatement, args...)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -62,24 +63,37 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	return utils.Response(jsonBody, "successfully insert "+table, http.StatusCreated, c)
 }
 
-func sqlStatement(primaryKey *PrimaryKey, jsonBody map[string]interface{}, informationSchemas []InformationSchema) (columns string, values string, err string) {
+func sqlStatementInsert(table string, primaryKey *PrimaryKey, jsonBody map[string]interface{}, informationSchemas []InformationSchema) (sql string, args []interface{}, err error) {
+	var columns, values []string
 	for key := range jsonBody {
 		if key != primaryKey.column {
-			columns += key + ", "
-			values += fmt.Sprintf("'%s', ", jsonBody[key])
+			columns = append(columns, key)
+			values = append(values, "?")
+			if jsonBody[key] == nil {
+				for _, i := range informationSchemas {
+					if i.IsNullable == "NO" && i.ColumName == key {
+						errorMessage := fmt.Sprintf(": Error:validation for '%s' failed on the 'required' tag", i.ColumName)
+						return "", args, errors.New(errorMessage)
+					}
+				}
+			}
+			args = append(args, jsonBody[key])
 		}
 	}
-	if !strings.Contains(columns, primaryKey.column) && "int" != primaryKey.format {
-		columns += primaryKey.column + ", "
-		values += "'" + uuid.New().String() + "', "
+	if "int" != primaryKey.format {
+		columns = append(columns, primaryKey.column)
+		values = append(values, "?")
+		args = append(args, uuid.New().String())
 	}
+
 	for _, i := range informationSchemas {
 		if i.IsNullable == "NO" && i.ColumName != primaryKey.column {
-			if !strings.Contains(columns, i.ColumName) {
-				errorMessage := fmt.Sprintf(", Error:validation for '%s' failed on the 'required' tag", i.ColumName)
-				return "", "", errorMessage
+			if !strings.Contains(strings.Join(columns, ","), i.ColumName) {
+				errorMessage := fmt.Sprintf(": Error:validation for '%s' failed on the 'required' tag", i.ColumName)
+				return "", args, errors.New(errorMessage)
 			}
 		}
 	}
-	return strings.TrimRight(columns, ", "), strings.TrimRight(values, ", "), ""
+	sql = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", table, strings.Join(columns, ","), strings.Join(values, ","))
+	return SetQuery(sql), args, nil
 }
