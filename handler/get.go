@@ -53,23 +53,18 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	table := c.Param("table")
 	db := h.db
 
-	// Get User Id Token
 	uuid, err := middleware.ExtractTokenID(c.Request())
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	log.Println("Get user id from token success")
 
-	// Get data 'users'
 	user, err := users.New(db).GetByID(c.Request().Context(), uuid)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	log.Println("Get data 'users' success")
 
-	// Get data 'services'
 	var service *models.Services
 	if c.QueryParam("isQuery") == "true" {
 		table, _ = url.QueryUnescape(table)
@@ -78,31 +73,25 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 			log.Println(err)
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 		}
-		log.Println("Get data 'services' success with queri")
 	} else {
 		service, err = services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), table, c.Request().Method)
 		if err != nil {
 			log.Println(err)
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 		}
-		log.Println("Get data 'services' success with table name")
 	}
 
-	// Get data 'user_service'
-	userService, err := userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
+	_, err = userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	log.Println("Get data 'user_service' success with id:", userService.ID)
 	
-	// Get data 'dbs'
 	database, err := dbs.New(db).GetByID(c.Request().Context(), service.DbID)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	log.Println("Get data 'dbs' success with name:", database.Name)
 
 	dbsConn, err := conn.InitDbs(conn.SQLXConfig{
 		Host:     database.Host,
@@ -173,7 +162,6 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	log.Println(sqlStatement)
 	rows, err := dbsConn.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)

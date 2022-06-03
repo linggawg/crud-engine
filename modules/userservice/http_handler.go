@@ -15,7 +15,7 @@ func New(db *sqlx.DB) *HttpSqlx {
 	return &HttpSqlx{db}
 }
 
-func (s *HttpSqlx) GetByServiceIDAndUserId(ctx context.Context, serviceId string, userId string) (userservices *models.UserService, err error) {
+func (s *HttpSqlx) GetByServiceIDAndUserId(ctx context.Context, serviceId, userId string) (userservices *models.UserService, err error) {
 	var userservice models.UserService
 	query := `
 	SELECT
