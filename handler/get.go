@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crud-engine/modules/dbs"
+	conn "crud-engine/pkg/database"
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
@@ -40,7 +42,7 @@ type PageFetchInput struct {
 func (h *HttpSqlx) Get(c echo.Context) error {
 	//get path table: nama table/query
 	//get userdId: token
-	
+
 	//get data service: nama table(service_url) + method
 	//get data service: query + method
 	//get data dbs: serviceId
@@ -52,7 +54,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		sqlTotal     string
 	)
 	table := c.Param("table")
-	db := h.db
+	//db := h.db
 
 	// Get User Id Token
 	uuid, err := middleware.ExtractTokenID(c.Request())
@@ -68,11 +70,38 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
+	getDbs, err := dbs.New(h.db).GetByID(c.Request().Context(), "f6cf97f7-c803-4cfa-b1b1-0e4f57127d43")
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	dbsConn, err := conn.InitDbs(conn.SQLXConfig{
+		Host:     getDbs.Host,
+		Port:     strconv.Itoa(getDbs.Port),
+		Name:     getDbs.Name,
+		Username: getDbs.Username,
+		Password: func() string {
+			if getDbs.Password != nil {
+				return *getDbs.Password
+			} else {
+				return ""
+			}
+		}(),
+		Dialect: getDbs.Dialect,
+	})
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
+
+	defer dbsConn.Close()
+
 	if c.QueryParam("isQuery") == "true" {
 		sqlStatement = table
 		sqlTotal = table
+
 	} else {
-		primaryKey, err := getPrimaryKey(db, table, c)
+		primaryKey, err := getPrimaryKey(dbsConn, table, getDbs.Dialect, c)
 		if err != nil {
 			log.Println(err)
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -105,13 +134,13 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	}
 
 	var totalItems int64
-	err = db.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
+	err = dbsConn.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	rows, err := db.QueryContext(c.Request().Context(), sqlStatement)
+	rows, err := dbsConn.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

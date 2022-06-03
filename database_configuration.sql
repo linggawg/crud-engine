@@ -24,6 +24,7 @@ CREATE TABLE "dbs" (
    "app_id" uuid,
    "name" varchar(255) COLLATE "pg_catalog"."default",
    "host" varchar(255) COLLATE "pg_catalog"."default",
+   "port" int8,
    "username" varchar(255) COLLATE "pg_catalog"."default",
    "password" varchar(255) COLLATE "pg_catalog"."default",
    "dialect" varchar(255) COLLATE "pg_catalog"."default",

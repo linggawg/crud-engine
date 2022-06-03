@@ -11,6 +11,10 @@ type HttpSqlx struct {
 	db *sqlx.DB
 }
 
+func New(db *sqlx.DB) *HttpSqlx {
+	return &HttpSqlx{db}
+}
+
 func (s *HttpSqlx) GetByID(ctx context.Context, id string) (dbs *models.Dbs, err error) {
 	var db models.Dbs
 	query := `
@@ -19,6 +23,7 @@ func (s *HttpSqlx) GetByID(ctx context.Context, id string) (dbs *models.Dbs, err
 		app_id,
 		name,
 		host,
+		port,
 		username,
 		password,
 		dialect
