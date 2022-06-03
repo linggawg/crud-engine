@@ -26,12 +26,11 @@ func SetQuery(query string) (newQuery string) {
 	}
 }
 
-func sqlIsNullable(db *sqlx.DB, table string, c echo.Context) (informationSchema []InformationSchema, err error) {
+func sqlIsNullable(db *sqlx.DB, table, dialect string, c echo.Context) (informationSchema []InformationSchema, err error) {
 	var (
-		is      []InformationSchema
-		sql     string
-		args    []interface{}
-		dialect = os.Getenv("DB_DIALECT")
+		is   []InformationSchema
+		sql  string
+		args []interface{}
 	)
 
 	if dialect == "mysql" {
@@ -53,10 +52,9 @@ func sqlIsNullable(db *sqlx.DB, table string, c echo.Context) (informationSchema
 	}
 	return is, nil
 }
-func getPrimaryKey(db *sqlx.DB, table string, c echo.Context) (p *PrimaryKey, err error) {
+func getPrimaryKey(db *sqlx.DB, table, dialect string, c echo.Context) (p *PrimaryKey, err error) {
 	var (
 		primarykey PrimaryKey
-		dialect    = os.Getenv("DB_DIALECT")
 	)
 
 	if dialect == "mysql" {
