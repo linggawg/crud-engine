@@ -2,15 +2,18 @@ package handler
 
 import (
 	"crud-engine/modules/dbs"
+	"crud-engine/modules/models"
 	"crud-engine/modules/services"
 	"crud-engine/modules/users"
 	"crud-engine/modules/userservice"
+	conn "crud-engine/pkg/database"
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -42,14 +45,6 @@ type PageFetchInput struct {
 // @Success      200  {object} utils.BaseWrapperModel
 // @Router       /sql/{table} [get]
 func (h *HttpSqlx) Get(c echo.Context) error {
-	//get path table: nama table/query
-	//get userdId: token
-	
-	//get data service: nama table(service_url) + method
-	//get data service: query + method
-	//get data dbs: serviceId
-	//get data user: userId
-	//get data user_service: serviceId + userId
 	errorMessage := os.Getenv("GET_ERROR_MESSAGE")
 	var (
 		sqlStatement string
@@ -75,13 +70,24 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	log.Println("Get data 'users' success")
 
 	// Get data 'services'
-	service, err := services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), table, c.Request().Method)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	var service *models.Services
+	if c.QueryParam("isQuery") == "true" {
+		table, _ = url.QueryUnescape(table)
+		service, err = services.New(db).GetByServiceDefinitionAndMethod(c.Request().Context(), table, c.Request().Method)
+		if err != nil {
+			log.Println(err)
+			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+		}
+		log.Println("Get data 'services' success with queri")
+	} else {
+		service, err = services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), table, c.Request().Method)
+		if err != nil {
+			log.Println(err)
+			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+		}
+		log.Println("Get data 'services' success with table name")
 	}
-	log.Println("Get data 'services' success")
-	
+
 	// Get data 'user_service'
 	userService, err := userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
 	if err != nil {
@@ -98,6 +104,26 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	}
 	log.Println("Get data 'dbs' success with name:", database.Name)
 
+	dbsConn, err := conn.InitDbs(conn.SQLXConfig{
+		Host:     database.Host,
+		Port:     strconv.Itoa(database.Port),
+		Name:     database.Name,
+		Username: database.Username,
+		Password: func() string {
+			if database.Password != nil {
+				return *database.Password
+			} else {
+				return ""
+			}
+		}(),
+		Dialect: database.Dialect,
+	})
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
+	defer dbsConn.Close()
+
 	pagination, err := getPagination(c)
 	if err != nil {
 		log.Println(err)
@@ -108,7 +134,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		sqlStatement = table
 		sqlTotal = table
 	} else {
-		primaryKey, err := getPrimaryKey(db, table, c)
+		primaryKey, err := getPrimaryKey(dbsConn, table, database.Dialect, c)
 		if err != nil {
 			log.Println(err)
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -141,13 +167,14 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	}
 
 	var totalItems int64
-	err = db.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
+	err = dbsConn.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	rows, err := db.QueryContext(c.Request().Context(), sqlStatement)
+	log.Println(sqlStatement)
+	rows, err := dbsConn.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

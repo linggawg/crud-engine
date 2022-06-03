@@ -23,6 +23,7 @@ func (s *HttpSqlx) GetByID(ctx context.Context, id string) (dbs *models.Dbs, err
 		app_id,
 		name,
 		host,
+		port,
 		username,
 		password,
 		dialect

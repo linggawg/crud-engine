@@ -24,9 +24,25 @@ func (h *HttpSqlx) Delete(c echo.Context) error {
 	errorMessage := os.Getenv("DELETE_ERROR_MESSAGE")
 	table := c.Param("table")
 	db := h.db
-	
+
 	value := c.Param("value")
 	field := c.QueryParam("field_id")
+	informationSchemas, err := sqlIsNullable(db, table, os.Getenv("DB_DIALECT"), c)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	isFoundField := false
+	for _, i := range informationSchemas {
+		if i.ColumName == field {
+			isFoundField = true
+			break
+		}
+	}
+	if !isFoundField {
+		errorMessage += ", field_id '" + field + "' is not found"
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
 	sqlStatement := "DELETE FROM " + table + " WHERE " + field + " ='" + value + "'"
 
 	stmt, err := db.Prepare(sqlStatement)

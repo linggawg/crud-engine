@@ -39,12 +39,12 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	primaryKey, err := getPrimaryKey(db, table, c)
+	primaryKey, err := getPrimaryKey(db, table, os.Getenv("DB_DIALECT"), c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	informationSchemas, err := sqlIsNullable(db, table, c)
+	informationSchemas, err := sqlIsNullable(db, table, os.Getenv("DB_DIALECT"), c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
