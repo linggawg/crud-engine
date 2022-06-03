@@ -45,6 +45,17 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
+	isFoundField := false
+	for _, i := range informationSchemas {
+		if i.ColumName == field {
+			isFoundField = true
+			break
+		}
+	}
+	if !isFoundField {
+		errorMessage += ", field_id '" + field + "' is not found"
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
 	primaryKey, err := getPrimaryKey(db, table, os.Getenv("DB_DIALECT"), c)
 	if err != nil {
 		log.Println(err)
