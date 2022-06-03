@@ -3,13 +3,13 @@ package handler
 import (
 	"crud-engine/pkg/utils"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/labstack/echo/v4"
 )
 
 // Put UpdateData godoc
@@ -74,7 +74,7 @@ func sqlStatementUpdate(table, fieldId, valueId string, primaryKey *PrimaryKey, 
 			if jsonBody[key] == nil {
 				for _, i := range informationSchemas {
 					if i.ColumName == key && i.IsNullable == "NO" {
-						err = errors.New(fmt.Sprintf(": Error:validation for '%s' failed on the 'required' tag", i.ColumName))
+						err = fmt.Errorf(": Error:validation for '%s' failed on the 'required' tag", i.ColumName)
 						return "", args, err
 					}
 				}

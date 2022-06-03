@@ -6,10 +6,11 @@ import (
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
-	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
@@ -75,6 +76,30 @@ func (h *HttpSqlx) Login(c echo.Context) error {
 	}
 	return utils.Response(token, "Login User", http.StatusOK, c)
 }
+
+func (s *HttpSqlx) GetByID(ctx context.Context, id string) (user *models.User, err error) {
+	var u models.User
+	query := `
+	SELECT
+		id,
+		username,
+		email,
+		password,
+		created_at,
+		created_by,
+		modified_at,
+		modified_by
+	FROM
+		users
+	WHERE id = $1
+		`
+	err = s.db.GetContext(ctx, &u, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 func (s *HttpSqlx) GetByEmail(ctx context.Context, email string) (user *models.User, err error) {
 	var u models.User
 	query := `
@@ -147,7 +172,6 @@ func (s *HttpSqlx) RegisterUser(c echo.Context) error {
 	}
 
 	return utils.Response(nil, "Register user", http.StatusOK, c)
-
 }
 
 func (s *HttpSqlx) Insert(ctx context.Context, user *models.User) (err error) {

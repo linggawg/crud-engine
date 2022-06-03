@@ -1,6 +1,10 @@
 package handler
 
 import (
+	"crud-engine/modules/dbs"
+	"crud-engine/modules/services"
+	"crud-engine/modules/users"
+	"crud-engine/modules/userservice"
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
@@ -60,7 +64,39 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	log.Println("ID : ", uuid)
+	log.Println("Get user id from token success")
+
+	// Get data 'users'
+	user, err := users.New(db).GetByID(c.Request().Context(), uuid)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	log.Println("Get data 'users' success")
+
+	// Get data 'services'
+	service, err := services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), table, c.Request().Method)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	log.Println("Get data 'services' success")
+	
+	// Get data 'user_service'
+	userService, err := userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	log.Println("Get data 'user_service' success with id:", userService.ID)
+	
+	// Get data 'dbs'
+	database, err := dbs.New(db).GetByID(c.Request().Context(), service.DbID)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	log.Println("Get data 'dbs' success with name:", database.Name)
 
 	pagination, err := getPagination(c)
 	if err != nil {

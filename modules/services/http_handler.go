@@ -11,6 +11,10 @@ type HttpSqlx struct {
 	db *sqlx.DB
 }
 
+func New(db *sqlx.DB) *HttpSqlx {
+	return &HttpSqlx{db}
+}
+
 func (s *HttpSqlx) GetByServiceUrlAndMethod(ctx context.Context, serviceUrl string, method string) (services *models.Services, err error) {
 	var service models.Services
 	query := `
