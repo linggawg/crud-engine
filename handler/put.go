@@ -1,12 +1,14 @@
 package handler
 
 import (
+	conn "crud-engine/pkg/database"
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -29,18 +31,43 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 		jsonBody     map[string]interface{}
 		err          error
 		errorMessage = os.Getenv("PUT_ERROR_MESSAGE")
-		db           = h.db
 		table        = c.Param("table")
 		value        = c.Param("value")
 		field        = c.QueryParam("field_id")
 	)
+
+	dbs, err := GetDbsConn(c, h.db)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+
+	database, err := conn.InitDbs(conn.SQLXConfig{
+		Host:     dbs.Host,
+		Port:     strconv.Itoa(dbs.Port),
+		Name:     dbs.Name,
+		Username: dbs.Username,
+		Password: func() string {
+			if dbs.Password != nil {
+				return *dbs.Password
+			} else {
+				return ""
+			}
+		}(),
+		Dialect: dbs.Dialect,
+	})
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
+	defer database.Close()
 
 	err = json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	informationSchemas, err := sqlIsNullable(db, table, os.Getenv("DB_DIALECT"), c)
+	informationSchemas, err := sqlIsNullable(database, table, dbs.Dialect, c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -56,7 +83,7 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 		errorMessage += ", field_id '" + field + "' is not found"
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	primaryKey, err := getPrimaryKey(db, table, os.Getenv("DB_DIALECT"), c)
+	primaryKey, err := getPrimaryKey(database, table, dbs.Dialect, c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -68,7 +95,7 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 		return utils.Response(nil, errorMessage+err.Error(), http.StatusBadRequest, c)
 	}
 
-	_, err = db.ExecContext(c.Request().Context(), SetQuery(sqlStatement), args...)
+	_, err = database.ExecContext(c.Request().Context(), SetQuery(sqlStatement), args...)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

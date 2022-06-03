@@ -1,13 +1,7 @@
 package handler
 
 import (
-	"crud-engine/modules/dbs"
-	"crud-engine/modules/models"
-	"crud-engine/modules/services"
-	"crud-engine/modules/users"
-	"crud-engine/modules/userservice"
 	conn "crud-engine/pkg/database"
-	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"log"
@@ -51,67 +45,32 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 		sqlTotal     string
 	)
 	table := c.Param("table")
-	db := h.db
 
-	uuid, err := middleware.ExtractTokenID(c.Request())
+	dbs, err := GetDbsConn(c, h.db)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	user, err := users.New(db).GetByID(c.Request().Context(), uuid)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-	}
-
-	var service *models.Services
-	if c.QueryParam("isQuery") == "true" {
-		table, _ = url.QueryUnescape(table)
-		service, err = services.New(db).GetByServiceDefinitionAndMethod(c.Request().Context(), table, c.Request().Method)
-		if err != nil {
-			log.Println(err)
-			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-		}
-	} else {
-		service, err = services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), table, c.Request().Method)
-		if err != nil {
-			log.Println(err)
-			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-		}
-	}
-
-	_, err = userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-	}
-	
-	database, err := dbs.New(db).GetByID(c.Request().Context(), service.DbID)
-	if err != nil {
-		log.Println(err)
-		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
-	}
-
-	dbsConn, err := conn.InitDbs(conn.SQLXConfig{
-		Host:     database.Host,
-		Port:     strconv.Itoa(database.Port),
-		Name:     database.Name,
-		Username: database.Username,
+	database, err := conn.InitDbs(conn.SQLXConfig{
+		Host:     dbs.Host,
+		Port:     strconv.Itoa(dbs.Port),
+		Name:     dbs.Name,
+		Username: dbs.Username,
 		Password: func() string {
-			if database.Password != nil {
-				return *database.Password
+			if dbs.Password != nil {
+				return *dbs.Password
 			} else {
 				return ""
 			}
 		}(),
-		Dialect: database.Dialect,
+		Dialect: dbs.Dialect,
 	})
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
-	defer dbsConn.Close()
+	defer database.Close()
 
 	pagination, err := getPagination(c)
 	if err != nil {
@@ -120,10 +79,11 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	}
 
 	if c.QueryParam("isQuery") == "true" {
+		table, _ = url.QueryUnescape(table)
 		sqlStatement = table
 		sqlTotal = table
 	} else {
-		primaryKey, err := getPrimaryKey(dbsConn, table, database.Dialect, c)
+		primaryKey, err := getPrimaryKey(database, table, dbs.Dialect, c)
 		if err != nil {
 			log.Println(err)
 			return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -156,13 +116,13 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	}
 
 	var totalItems int64
-	err = dbsConn.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
+	err = database.QueryRow("SELECT COUNT('total') FROM (" + sqlTotal + ") as total").Scan(&totalItems)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	rows, err := dbsConn.QueryContext(c.Request().Context(), sqlStatement)
+	rows, err := database.QueryContext(c.Request().Context(), sqlStatement)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

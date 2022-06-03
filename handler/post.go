@@ -1,6 +1,7 @@
 package handler
 
 import (
+	conn "crud-engine/pkg/database"
 	"crud-engine/pkg/utils"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -29,22 +31,47 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 	var (
 		err          error
 		errorMessage = os.Getenv("POST_ERROR_MESSAGE")
-		db           = h.db
 		table        = c.Param("table")
 		jsonBody     map[string]interface{}
 	)
-	err = json.NewDecoder(c.Request().Body).Decode(&jsonBody)
+
+	dbs, err := GetDbsConn(c, h.db)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
 
-	primaryKey, err := getPrimaryKey(db, table, os.Getenv("DB_DIALECT"), c)
+	database, err := conn.InitDbs(conn.SQLXConfig{
+		Host:     dbs.Host,
+		Port:     strconv.Itoa(dbs.Port),
+		Name:     dbs.Name,
+		Username: dbs.Username,
+		Password: func() string {
+			if dbs.Password != nil {
+				return *dbs.Password
+			} else {
+				return ""
+			}
+		}(),
+		Dialect: dbs.Dialect,
+	})
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
+	defer database.Close()
+
+	err = json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
 	}
-	informationSchemas, err := sqlIsNullable(db, table, os.Getenv("DB_DIALECT"), c)
+	primaryKey, err := getPrimaryKey(database, table, dbs.Dialect, c)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+	informationSchemas, err := sqlIsNullable(database, table, dbs.Dialect, c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -54,7 +81,7 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		log.Println(err)
 		return utils.Response(nil, errorMessage+err.Error(), http.StatusBadRequest, c)
 	}
-	_, err = db.ExecContext(c.Request().Context(), sqlStatement, args...)
+	_, err = database.ExecContext(c.Request().Context(), sqlStatement, args...)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -80,7 +107,7 @@ func sqlStatementInsert(table string, primaryKey *PrimaryKey, jsonBody map[strin
 			args = append(args, jsonBody[key])
 		}
 	}
-	if "int" != primaryKey.format {
+	if !strings.EqualFold(primaryKey.format, "int") {
 		columns = append(columns, primaryKey.column)
 		values = append(values, "?")
 		args = append(args, uuid.New().String())

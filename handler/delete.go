@@ -1,10 +1,12 @@
 package handler
 
 import (
+	conn "crud-engine/pkg/database"
 	"crud-engine/pkg/utils"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
@@ -23,11 +25,36 @@ import (
 func (h *HttpSqlx) Delete(c echo.Context) error {
 	errorMessage := os.Getenv("DELETE_ERROR_MESSAGE")
 	table := c.Param("table")
-	db := h.db
+
+	dbs, err := GetDbsConn(c, h.db)
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
+	}
+
+	database, err := conn.InitDbs(conn.SQLXConfig{
+		Host:     dbs.Host,
+		Port:     strconv.Itoa(dbs.Port),
+		Name:     dbs.Name,
+		Username: dbs.Username,
+		Password: func() string {
+			if dbs.Password != nil {
+				return *dbs.Password
+			} else {
+				return ""
+			}
+		}(),
+		Dialect: dbs.Dialect,
+	})
+	if err != nil {
+		log.Println(err)
+		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
+	}
+	defer database.Close()
 
 	value := c.Param("value")
 	field := c.QueryParam("field_id")
-	informationSchemas, err := sqlIsNullable(db, table, os.Getenv("DB_DIALECT"), c)
+	informationSchemas, err := sqlIsNullable(database, table, dbs.Dialect, c)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
@@ -45,7 +72,7 @@ func (h *HttpSqlx) Delete(c echo.Context) error {
 	}
 	sqlStatement := "DELETE FROM " + table + " WHERE " + field + " ='" + value + "'"
 
-	stmt, err := db.Prepare(sqlStatement)
+	stmt, err := database.Prepare(sqlStatement)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

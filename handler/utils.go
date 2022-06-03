@@ -1,12 +1,40 @@
 package handler
 
 import (
+	"crud-engine/modules/dbs"
+	"crud-engine/modules/models"
+	"crud-engine/modules/services"
+	"crud-engine/modules/users"
+	"crud-engine/modules/userservice"
+	"crud-engine/pkg/middleware"
 	"fmt"
-	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo/v4"
+	"log"
+	"net/url"
 	"os"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/labstack/echo/v4"
 )
+
+type PrimaryKey struct {
+	column string
+	format string
+}
+
+type KeyPostgres struct {
+	Attname    string `db:"attname"`
+	FormatType string `db:"format_type"`
+}
+
+type KeyMySQL struct {
+	Field       string  `db:"Field"`
+	TypeData    string  `db:"Type"`
+	NullData    string  `db:"Null"`
+	Key         string  `db:"Key"`
+	DefaultData *string `db:"Default"`
+	Extra       *string `db:"Extra"`
+}
 
 type InformationSchema struct {
 	ColumName  string `db:"column_name"`
@@ -52,6 +80,7 @@ func sqlIsNullable(db *sqlx.DB, table, dialect string, c echo.Context) (informat
 	}
 	return is, nil
 }
+
 func getPrimaryKey(db *sqlx.DB, table, dialect string, c echo.Context) (p *PrimaryKey, err error) {
 	var (
 		primarykey PrimaryKey
@@ -93,21 +122,47 @@ func getPrimaryKey(db *sqlx.DB, table, dialect string, c echo.Context) (p *Prima
 	return &primarykey, err
 }
 
-type PrimaryKey struct {
-	column string
-	format string
-}
+func GetDbsConn(c echo.Context, db *sqlx.DB) (databases *models.Dbs, err error) {
+	serviceUrl := c.Param("table")
 
-type KeyPostgres struct {
-	Attname    string `db:"attname"`
-	FormatType string `db:"format_type"`
-}
-
-type KeyMySQL struct {
-	Field       string  `db:"Field"`
-	TypeData    string  `db:"Type"`
-	NullData    string  `db:"Null"`
-	Key         string  `db:"Key"`
-	DefaultData *string `db:"Default"`
-	Extra       *string `db:"Extra"`
+	userId, err := middleware.ExtractTokenID(c.Request())
+	if err != nil {
+		log.Println(err)
+		return nil , err
+	}
+	
+	user, err := users.New(db).GetByID(c.Request().Context(), userId)
+	if err != nil {
+		log.Println(err)
+		return nil , err
+	}
+	
+	var service *models.Services
+	if  strings.EqualFold(c.QueryParam("isQuery"), "true"){
+		serviceUrl, _ = url.QueryUnescape(serviceUrl)
+		service, err = services.New(db).GetByServiceDefinitionAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
+		if err != nil {
+			log.Println(err)
+			return nil , err
+		}
+	} else {
+		service, err = services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
+			if err != nil {
+			log.Println(err)
+			return nil , err
+		}
+	}
+	
+	_, err = userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
+	if err != nil {
+		log.Println(err)
+		return nil , err
+	}
+	
+	database, err := dbs.New(db).GetByID(c.Request().Context(), service.DbID)
+	if err != nil {
+		log.Println(err)
+		return nil , err
+	}
+	return database, nil
 }
