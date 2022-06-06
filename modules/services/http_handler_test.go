@@ -4,6 +4,7 @@ import (
 	"context"
 	"crud-engine/modules/models"
 	"crud-engine/modules/services"
+	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,24 @@ func TestGetByServiceUrlAndMethod(t *testing.T) {
 	assert.NotNil(t, mService)
 }
 
+func TestGetByServiceUrlAndMethodNoRow(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "service_definition", "is_query", "created_at", "created_by", "modified_at", "modified_by"})
+	query := "SELECT id, db_id, service_url, method, service_definition, is_query FROM services WHERE service_url = \\$1 AND method = \\$2"
+	mock.ExpectQuery(query).WithArgs(mockServicesList[0].ServiceUrl, mockServicesList[0].Method).WillReturnRows(rows)
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+	a := services.New(sqlxDB)
+
+	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
+	assert.Empty(t, mService)
+	assert.Error(t, err)
+	assert.Equal(t, err, sql.ErrNoRows)
+}
+
 func TestGetByServiceDefinitionAndMethod(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -82,4 +101,22 @@ func TestGetByServiceDefinitionAndMethod(t *testing.T) {
 	mService, err := a.GetByServiceDefinitionAndMethod(context.TODO(), *mockServicesList[0].ServiceDefinition, mockServicesList[0].Method)
 	assert.NoError(t, err)
 	assert.NotNil(t, mService)
+}
+
+func TestGetByServiceDefinitionAndMethodNoRows(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "service_definition", "is_query", "created_at", "created_by", "modified_at", "modified_by"})
+	query := "SELECT id, db_id, service_url, method, service_definition, is_query FROM services WHERE is_query = true AND service_definition = \\$1 AND method = \\$2"
+	mock.ExpectQuery(query).WithArgs(mockServicesList[0].ServiceDefinition, mockServicesList[0].Method).WillReturnRows(rows)
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+	a := services.New(sqlxDB)
+
+	mService, err := a.GetByServiceDefinitionAndMethod(context.TODO(), *mockServicesList[0].ServiceDefinition, mockServicesList[0].Method)
+	assert.Empty(t, mService)
+	assert.Error(t, err)
+	assert.Equal(t, err, sql.ErrNoRows)
 }
