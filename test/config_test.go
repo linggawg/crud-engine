@@ -14,7 +14,7 @@ type Env struct {
 }
 
 // GlobalEnv global environment
-var GlobalEnv Env
+var TestEnv Env
 
 func init() {
 	errEnv := godotenv.Load("test.env")
@@ -31,9 +31,9 @@ func init() {
 			panic("missing HTTP_PORT environment")
 		}
 	}
-	GlobalEnv.HTTPPort = uint16(port)
+	TestEnv.HTTPPort = uint16(port)
 
-	GlobalEnv.SQLXDatabase = conn.SQLXConfig{
+	TestEnv.SQLXDatabase = conn.SQLXConfig{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     os.Getenv("DB_PORT"),
 		Name:     os.Getenv("DB_NAME"),
