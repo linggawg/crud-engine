@@ -20,18 +20,10 @@ Crud Engine using Go Lang
 # for postgresql connection
 DB_DIALECT=postgres
 DB_USER=postgres
-DB_PASSWORD=root
+DB_PASSWORD=postgres
 DB_NAME=crud_go
 DB_HOST=YOUR_IP_HOST/SERVER
 DB_PORT=5432
-
-# for mysql connection
-DB_DIALECT=mysql
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=chat_app
-DB_HOST=YOUR_IP_HOST/SERVER
-DB_PORT=3306
 ```
 - and run docker-compose up -d at root project path
 ```sh
