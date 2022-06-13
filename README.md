@@ -17,7 +17,6 @@ Crud Engine using Go Lang
 ## How to Run ?
 - edit .env file to setting connection database, and place at root project path
 ```sh
-# for postgresql connection
 DB_DIALECT=postgres
 DB_USER=postgres
 DB_PASSWORD=postgres
