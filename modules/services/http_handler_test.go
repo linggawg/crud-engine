@@ -15,12 +15,13 @@ import (
 
 var (
 	serviceDefinition = "SELECT id FROM user"
+	serviceUrl        = "user"
 	mockServicesList  = models.ServicesList{
 		models.Services{
 			ID:                "20bd16be-7f64-4281-9b58-758ecc7098b9",
 			DbID:              "33d2a2b4-463f-4a27-aaac-d90fbfe6ebd2",
 			Method:            "GET",
-			ServiceUrl:        "user",
+			ServiceUrl:        &serviceUrl,
 			ServiceDefinition: &serviceDefinition,
 			IsQuery:           false,
 			CreatedAt:         null.TimeFrom(time.Now()),
@@ -32,7 +33,7 @@ var (
 			ID:                "18a53750-d3e2-4e5a-9d0c-e88d368509f7",
 			DbID:              "33d2a2b4-463f-4a27-aaac-d90fbfe6ebd2",
 			Method:            "GET",
-			ServiceUrl:        "user",
+			ServiceUrl:        &serviceUrl,
 			ServiceDefinition: &serviceDefinition,
 			IsQuery:           false,
 			CreatedAt:         null.TimeFrom(time.Now()),
@@ -59,7 +60,7 @@ func TestGetByServiceUrlAndMethod(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
 	a := services.New(sqlxDB)
 
-	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
+	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), *mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
 	assert.NoError(t, err)
 	assert.NotNil(t, mService)
 }
@@ -76,7 +77,7 @@ func TestGetByServiceUrlAndMethodNoRow(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
 	a := services.New(sqlxDB)
 
-	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
+	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), *mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
 	assert.Empty(t, mService)
 	assert.Error(t, err)
 	assert.Equal(t, err, sql.ErrNoRows)
