@@ -1,12 +1,14 @@
 package handler
 
 import (
-	"crud-engine/modules/dbs"
-	"crud-engine/modules/models"
+	"crud-engine/modules/dbs/models/domain"
+	models2 "crud-engine/modules/models"
 	"crud-engine/modules/services"
 	"crud-engine/modules/users"
 	"crud-engine/modules/userservice"
 	"crud-engine/pkg/middleware"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -122,47 +124,54 @@ func getPrimaryKey(db *sqlx.DB, table, dialect string, c echo.Context) (p *Prima
 	return &primarykey, err
 }
 
-func GetDbsConn(c echo.Context, db *sqlx.DB) (databases *models.Dbs, err error) {
+func (h *HttpSqlx) GetDbsConn(c echo.Context, db *sqlx.DB) (databases *models.Dbs, err error) {
 	serviceUrl := c.Param("table")
 
 	userId, err := middleware.ExtractTokenID(c.Request())
 	if err != nil {
 		log.Println(err)
-		return nil , err
+		return nil, err
 	}
-	
+
 	user, err := users.New(db).GetByID(c.Request().Context(), userId)
 	if err != nil {
 		log.Println(err)
-		return nil , err
+		return nil, err
 	}
-	
-	var service *models.Services
-	if  strings.EqualFold(c.QueryParam("isQuery"), "true"){
+
+	var service *models2.Services
+	if strings.EqualFold(c.QueryParam("isQuery"), "true") {
 		serviceUrl, _ = url.QueryUnescape(serviceUrl)
 		service, err = services.New(db).GetByServiceDefinitionAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
 		if err != nil {
 			log.Println(err)
-			return nil , err
+			return nil, err
 		}
 	} else {
 		service, err = services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
-			if err != nil {
+		if err != nil {
 			log.Println(err)
-			return nil , err
+			return nil, err
 		}
 	}
-	
+
 	_, err = userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
 	if err != nil {
 		log.Println(err)
-		return nil , err
+		return nil, err
 	}
-	
-	database, err := dbs.New(db).GetByID(c.Request().Context(), service.DbID)
+
+	result := h.dbsQueryUsecase.GetByID(c.Request().Context(), service.DbID)
 	if err != nil {
 		log.Println(err)
-		return nil , err
+		return nil, err
 	}
-	return database, nil
+	if result.Error != nil {
+		return nil, errors.New(result.Error.(string))
+	}
+
+	var data models.Dbs
+	byteSub, _ := json.Marshal(result.Data)
+	json.Unmarshal(byteSub, &data)
+	return &data, nil
 }

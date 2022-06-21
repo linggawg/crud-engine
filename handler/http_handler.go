@@ -1,6 +1,8 @@
 package handler
 
 import (
+	dbsQueries "crud-engine/modules/dbs/repositories/queries"
+	dbsUsecase "crud-engine/modules/dbs/usecases"
 	"crud-engine/pkg/middleware"
 
 	"github.com/jmoiron/sqlx"
@@ -8,11 +10,19 @@ import (
 )
 
 type HttpSqlx struct {
-	db *sqlx.DB
+	db              *sqlx.DB
+	dbsQueryUsecase dbsUsecase.QueryUsecase
 }
 
 func New(db *sqlx.DB) *HttpSqlx {
-	return &HttpSqlx{db}
+
+	dbsPostgreQuery := dbsQueries.NewDbsQuery(db)
+	dbsQueryUsecase := dbsUsecase.NewQueryUsecase(dbsPostgreQuery)
+
+	return &HttpSqlx{
+		db:              db,
+		dbsQueryUsecase: dbsQueryUsecase,
+	}
 }
 
 // Mount function

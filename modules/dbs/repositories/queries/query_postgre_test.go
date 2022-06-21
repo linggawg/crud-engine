@@ -1,9 +1,9 @@
-package dbs_test
+package queries_test
 
 import (
 	"context"
-	"crud-engine/modules/dbs"
-	"crud-engine/modules/models"
+	"crud-engine/modules/dbs/models/domain"
+	"crud-engine/modules/dbs/repositories/queries"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -59,7 +59,7 @@ func TestGetByID(t *testing.T) {
 	query := "SELECT id, app_id, name, host, port, username, password, dialect FROM dbs WHERE id = \\$1"
 	mock.ExpectQuery(query).WithArgs(mockDbsList[0].ID).WillReturnRows(rows)
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := dbs.New(sqlxDB)
+	a := queries.NewDbsQuery(sqlxDB)
 
 	mUserServices, err := a.GetByID(context.TODO(), mockDbsList[0].ID)
 	assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestGetByIDNoRows(t *testing.T) {
 	query := "SELECT id, app_id, name, host, port, username, password, dialect FROM dbs WHERE id = \\$1"
 	mock.ExpectQuery(query).WithArgs(mockDbsList[0].ID).WillReturnRows(rows)
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := dbs.New(sqlxDB)
+	a := queries.NewDbsQuery(sqlxDB)
 
 	mDbs, err := a.GetByID(context.TODO(), mockDbsList[0].ID)
 	assert.Empty(t, mDbs)

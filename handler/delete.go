@@ -26,7 +26,7 @@ func (h *HttpSqlx) Delete(c echo.Context) error {
 	errorMessage := os.Getenv("DELETE_ERROR_MESSAGE")
 	table := c.Param("table")
 
-	dbs, err := GetDbsConn(c, h.db)
+	dbs, err := h.GetDbsConn(c, h.db)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

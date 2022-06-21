@@ -36,7 +36,7 @@ func (h *HttpSqlx) Put(c echo.Context) error {
 		field        = c.QueryParam("field_id")
 	)
 
-	dbs, err := GetDbsConn(c, h.db)
+	dbs, err := h.GetDbsConn(c, h.db)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)
