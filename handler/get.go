@@ -46,7 +46,7 @@ func (h *HttpSqlx) Get(c echo.Context) error {
 	)
 	table := c.Param("table")
 
-	dbs, err := GetDbsConn(c, h.db)
+	dbs, err := h.GetDbsConn(c, h.db)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

@@ -35,7 +35,7 @@ func (h *HttpSqlx) Post(c echo.Context) error {
 		jsonBody     map[string]interface{}
 	)
 
-	dbs, err := GetDbsConn(c, h.db)
+	dbs, err := h.GetDbsConn(c, h.db)
 	if err != nil {
 		log.Println(err)
 		return utils.Response(nil, errorMessage, http.StatusBadRequest, c)

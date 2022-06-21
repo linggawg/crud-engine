@@ -1,21 +1,20 @@
-package services
+package queries
 
 import (
 	"context"
-	"crud-engine/modules/models"
-
+	models "crud-engine/modules/services/models/domain"
 	"github.com/jmoiron/sqlx"
 )
 
-type HttpSqlx struct {
+type ServicesPostgreQuery struct {
 	db *sqlx.DB
 }
 
-func New(db *sqlx.DB) *HttpSqlx {
-	return &HttpSqlx{db}
+func NewServicesQuery(db *sqlx.DB) *ServicesPostgreQuery {
+	return &ServicesPostgreQuery{db}
 }
 
-func (s *HttpSqlx) GetByServiceUrlAndMethod(ctx context.Context, serviceUrl, method string) (services *models.Services, err error) {
+func (s *ServicesPostgreQuery) GetByServiceUrlAndMethod(ctx context.Context, serviceUrl, method string) (services *models.Services, err error) {
 	var service models.Services
 	query := `
 	SELECT
@@ -36,7 +35,7 @@ func (s *HttpSqlx) GetByServiceUrlAndMethod(ctx context.Context, serviceUrl, met
 	return &service, nil
 }
 
-func (s *HttpSqlx) GetByServiceDefinitionAndMethod(ctx context.Context, serviceDefinition, method string) (services *models.Services, err error) {
+func (s *ServicesPostgreQuery) GetByServiceDefinitionAndMethod(ctx context.Context, serviceDefinition, method string) (services *models.Services, err error) {
 	var service models.Services
 	query := `
 	SELECT
