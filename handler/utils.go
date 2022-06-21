@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"crud-engine/modules/dbs/models/domain"
-	models2 "crud-engine/modules/models"
-	"crud-engine/modules/services"
+	dbsModels "crud-engine/modules/dbs/models/domain"
+	models "crud-engine/modules/services/models/domain"
 	"crud-engine/modules/users"
 	"crud-engine/modules/userservice"
 	"crud-engine/pkg/middleware"
+	"crud-engine/pkg/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -124,7 +124,8 @@ func getPrimaryKey(db *sqlx.DB, table, dialect string, c echo.Context) (p *Prima
 	return &primarykey, err
 }
 
-func (h *HttpSqlx) GetDbsConn(c echo.Context, db *sqlx.DB) (databases *models.Dbs, err error) {
+func (h *HttpSqlx) GetDbsConn(c echo.Context, db *sqlx.DB) (databases *dbsModels.Dbs, err error) {
+	var result utils.Result
 	serviceUrl := c.Param("table")
 
 	userId, err := middleware.ExtractTokenID(c.Request())
@@ -139,21 +140,22 @@ func (h *HttpSqlx) GetDbsConn(c echo.Context, db *sqlx.DB) (databases *models.Db
 		return nil, err
 	}
 
-	var service *models2.Services
+	var serviceRes utils.Result
 	if strings.EqualFold(c.QueryParam("isQuery"), "true") {
 		serviceUrl, _ = url.QueryUnescape(serviceUrl)
-		service, err = services.New(db).GetByServiceDefinitionAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
-		if err != nil {
-			log.Println(err)
-			return nil, err
+		serviceRes = h.servicesUsecase.GetByServiceDefinitionAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
+		if serviceRes.Error != nil {
+			return nil, errors.New(result.Error.(string))
 		}
 	} else {
-		service, err = services.New(db).GetByServiceUrlAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
-		if err != nil {
-			log.Println(err)
-			return nil, err
+		serviceRes = h.servicesUsecase.GetByServiceUrlAndMethod(c.Request().Context(), serviceUrl, c.Request().Method)
+		if serviceRes.Error != nil {
+			return nil, errors.New(result.Error.(string))
 		}
 	}
+	var service *models.Services
+	byteSub, _ := json.Marshal(serviceRes.Data)
+	json.Unmarshal(byteSub, &service)
 
 	_, err = userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
 	if err != nil {
@@ -161,17 +163,13 @@ func (h *HttpSqlx) GetDbsConn(c echo.Context, db *sqlx.DB) (databases *models.Db
 		return nil, err
 	}
 
-	result := h.dbsQueryUsecase.GetByID(c.Request().Context(), service.DbID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+	result = h.dbsQueryUsecase.GetByID(c.Request().Context(), service.DbID)
 	if result.Error != nil {
 		return nil, errors.New(result.Error.(string))
 	}
 
-	var data models.Dbs
-	byteSub, _ := json.Marshal(result.Data)
+	var data dbsModels.Dbs
+	byteSub, _ = json.Marshal(result.Data)
 	json.Unmarshal(byteSub, &data)
 	return &data, nil
 }

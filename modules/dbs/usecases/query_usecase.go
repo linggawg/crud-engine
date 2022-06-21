@@ -23,7 +23,7 @@ func (u DbsQueryUsecase) GetByID(ctx context.Context, id string) utils.Result {
 	dbs, err := u.DbsPostgreQuery.GetByID(ctx, id)
 	if err != nil {
 		errObj := httpError.NewNotFound()
-		errObj.Message = "Data subvessel tidak ditemukan"
+		errObj.Message = "Data dbs tidak ditemukan"
 		result.Error = errObj
 		return result
 	}
