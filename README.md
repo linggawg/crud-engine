@@ -6,13 +6,13 @@
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
 # crud-engine
-Crud Engine using Go Lang
+Crud Engine using Go
 
 ## Prerequisite
 - Docker Engine Latest
 - Docker Compose Latest 
 - Golang
-- RDBMS (PostgreSQL, MySQL)
+- RDBMS (PostgreSQL)
 
 ## How to Run ?
 - edit .env file to setting connection database, and place at root project path
