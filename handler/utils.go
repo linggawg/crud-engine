@@ -2,9 +2,8 @@ package handler
 
 import (
 	dbsModels "crud-engine/modules/dbs/models/domain"
-	models "crud-engine/modules/services/models/domain"
+	serviceModels "crud-engine/modules/services/models/domain"
 	"crud-engine/modules/users"
-	"crud-engine/modules/userservice"
 	"crud-engine/pkg/middleware"
 	"crud-engine/pkg/utils"
 	"encoding/json"
@@ -153,12 +152,12 @@ func (h *HttpSqlx) GetDbsConn(c echo.Context, db *sqlx.DB) (databases *dbsModels
 			return nil, errors.New(result.Error.(string))
 		}
 	}
-	var service *models.Services
+	var service *serviceModels.Services
 	byteSub, _ := json.Marshal(serviceRes.Data)
 	json.Unmarshal(byteSub, &service)
 
-	_, err = userservice.New(db).GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
-	if err != nil {
+	userServiceRes := h.userServiceUsecase.GetByServiceIDAndUserId(c.Request().Context(), service.ID, user.ID)
+	if userServiceRes.Error != nil {
 		log.Println(err)
 		return nil, err
 	}

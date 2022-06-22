@@ -1,16 +1,17 @@
-package userservice_test
+package queries_test
 
 import (
 	"context"
-	"crud-engine/modules/models"
-	_userservice "crud-engine/modules/userservice"
+	models "crud-engine/modules/userservice/models/domain"
+	"crud-engine/modules/userservice/repositories/queries"
 	"database/sql"
+	"testing"
+	"time"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/guregu/null.v4"
-	"testing"
-	"time"
 )
 
 var mockUserService = models.UserServices{
@@ -48,7 +49,7 @@ func TestGetByServiceIDAndUserId(t *testing.T) {
 	query := "SELECT id, user_id, service_id FROM user_service WHERE service_id = \\$1 AND user_id = \\$2"
 	mock.ExpectQuery(query).WithArgs(mockUserService[0].ServiceID, mockUserService[0].UserID).WillReturnRows(rows)
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := _userservice.New(sqlxDB)
+	a := queries.NewUserServiceQuery(sqlxDB)
 
 	mUserServices, err := a.GetByServiceIDAndUserId(context.TODO(), mockUserService[0].ServiceID, mockUserService[0].UserID)
 	assert.NoError(t, err)
@@ -64,7 +65,7 @@ func TestGetByServiceIDAndUserIdNoRows(t *testing.T) {
 	query := "SELECT id, user_id, service_id FROM user_service WHERE service_id = \\$1 AND user_id = \\$2"
 	mock.ExpectQuery(query).WithArgs(mockUserService[0].ServiceID, mockUserService[0].UserID).WillReturnRows(rows)
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := _userservice.New(sqlxDB)
+	a := queries.NewUserServiceQuery(sqlxDB)
 
 	mUserServices, err := a.GetByServiceIDAndUserId(context.TODO(), mockUserService[0].ServiceID, mockUserService[0].UserID)
 	assert.Empty(t, mUserServices)

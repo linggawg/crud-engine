@@ -5,6 +5,8 @@ import (
 	dbsUsecase "crud-engine/modules/dbs/usecases"
 	servicesQueries "crud-engine/modules/services/repositories/queries"
 	servicesUsecase "crud-engine/modules/services/usecases"
+	userServiceQueries "crud-engine/modules/userservice/repositories/queries"
+	userServiceUsecase "crud-engine/modules/userservice/usecases"
 	"crud-engine/pkg/middleware"
 
 	"github.com/jmoiron/sqlx"
@@ -15,6 +17,7 @@ type HttpSqlx struct {
 	db              *sqlx.DB
 	dbsQueryUsecase dbsUsecase.QueryUsecase
 	servicesUsecase servicesUsecase.QueryUsecase
+	userServiceUsecase userServiceUsecase.QueryUsecase
 }
 
 func New(db *sqlx.DB) *HttpSqlx {
@@ -25,10 +28,14 @@ func New(db *sqlx.DB) *HttpSqlx {
 	servicesPostgreQuery := servicesQueries.NewServicesQuery(db)
 	servicesUsecase := servicesUsecase.NewQueryUsecase(servicesPostgreQuery)
 
+	userServicePostgreQuery := userServiceQueries.NewUserServiceQuery(db)
+	userServiceUsecase := userServiceUsecase.NewQueryUsecase(userServicePostgreQuery)
+
 	return &HttpSqlx{
 		db:              db,
 		dbsQueryUsecase: dbsQueryUsecase,
 		servicesUsecase: servicesUsecase,
+		userServiceUsecase: userServiceUsecase,
 	}
 }
 
