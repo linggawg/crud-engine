@@ -1,3 +1,11 @@
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine) <br />
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
+
 # crud-engine
 Crud Engine using Go
 
