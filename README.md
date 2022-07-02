@@ -5,7 +5,6 @@
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Nazyli_curd-engine&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Nazyli_curd-engine)
-
 # crud-engine
 Crud Engine using Go
 
