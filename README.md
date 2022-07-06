@@ -27,3 +27,4 @@ $ swag init -g main.go --output docs
 ```sh
 {{base_url}}/swagger/index.html
 ```
+<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/GoLand.png" alt="GoLand logo.">
