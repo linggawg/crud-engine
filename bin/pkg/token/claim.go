@@ -8,5 +8,6 @@ type ResToken struct {
 
 type Claim struct {
 	UserID        string `json:"userId"`
+	RoleName	  string `json:"roleName"`
 	Authorization string `json:"authorization"`
 }

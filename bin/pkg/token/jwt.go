@@ -3,6 +3,7 @@ package token
 import (
 	"engine/bin/config"
 	"engine/bin/pkg/utils"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,20 +12,23 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func Generate(uid string) (token *ResToken, err error) {
-	// duration set 3600 seconds
-	duration := (time.Hour * 1).Seconds()
+func Generate(uid, roleName string, expire int) (token *ResToken, err error) {
+	duration, err := time.ParseDuration(fmt.Sprintf("%ds", expire))
+	if err != nil {
+		return nil, errors.New("failed parsing duration time")
+	}
 
 	claims := jwt.MapClaims{}
+	claims["scope"] = roleName
 	claims["authorized"] = true
 	claims["userId"] = uid
-	claims["iat"] = time.Now().Unix()                                          //Token create
-	claims["exp"] = time.Now().Add(config.GlobalEnv.AccessTokenExpired).Unix() //Token expired
+	claims["iat"] = time.Now().Unix()
+	claims["exp"] = time.Now().Add(duration).Unix()
 	tk := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	accessToken, err := tk.SignedString([]byte(config.GlobalEnv.APISecret))
 	token = &ResToken{
 		TokenType: "Bearer",
-		Duration:  duration,
+		Duration:  duration.Seconds(),
 		Token:     accessToken,
 	}
 	return token, err
@@ -58,7 +62,8 @@ func Validate(r *http.Request) <-chan utils.Result {
 		var tokenClaim Claim
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 			tokenClaim = Claim{
-				UserID: claims["userId"].(string),
+				UserID:   claims["userId"].(string),
+				RoleName: claims["scope"].(string),
 			}
 		}
 		output <- utils.Result{Data: tokenClaim}
@@ -67,11 +72,6 @@ func Validate(r *http.Request) <-chan utils.Result {
 }
 
 func ExtractToken(r *http.Request) string {
-	keys := r.URL.Query()
-	token := keys.Get("token")
-	if token != "" {
-		return token
-	}
 	bearerToken := r.Header.Get("Authorization")
 	if len(strings.Split(bearerToken, " ")) == 2 {
 		return strings.Split(bearerToken, " ")[1]

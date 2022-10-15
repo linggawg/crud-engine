@@ -2,78 +2,146 @@ package usecases
 
 import (
 	"context"
-	dbsModels "engine/bin/modules/dbs/models/domain"
+	"engine/bin/config"
 	"engine/bin/modules/engine/helpers"
 	models "engine/bin/modules/engine/models/domain"
-	"engine/bin/modules/engine/repositories/commands"
-	"engine/bin/modules/engine/repositories/queries"
-	"engine/bin/pkg/databases"
+	resourcesMappingModels "engine/bin/modules/resources-mapping/models/domain"
+	"engine/bin/pkg/databases/connection"
 	httpError "engine/bin/pkg/http-error"
 	"engine/bin/pkg/utils"
-	"errors"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/jmoiron/sqlx"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 )
 
-type engineCommandUsecase struct {
-	engineCommand commands.EngineSQL
-	engineQuery   queries.EngineSQL
-	db            *databases.BulkConnectionPkg
+type EngineCommandUsecase struct {
+	db   connection.Connection
+	repo *helpers.BulkRepository
 }
 
-func NewCommandUsecase(engineCommand commands.EngineSQL, engineQuery queries.EngineSQL, db databases.BulkConnectionPkg) *engineCommandUsecase {
-	return &engineCommandUsecase{
-		engineCommand: engineCommand,
-		engineQuery:   engineQuery,
-		db:            &db,
+func NewCommandUsecase(db connection.Connection, repo helpers.BulkRepository) *EngineCommandUsecase {
+	return &EngineCommandUsecase{
+		db:   db,
+		repo: &repo,
 	}
 }
 
-func (h *engineCommandUsecase) Insert(ctx context.Context, dbs dbsModels.Dbs, payload *models.EngineRequest) (result utils.Result) {
-	tx, err := h.db.GetBulkConnectionSql(dbs.ID)
+func (h *EngineCommandUsecase) SetupDataset(ctx context.Context, dialect string, db *sqlx.DB) (result utils.Result) {
+	repository := h.repo.GetBulkRepository(dialect)
+	sql := `INSERT INTO roles (id, name, created_at, created_by) SELECT $1, $2, $3, $4 WHERE NOT EXISTS ( SELECT name FROM roles WHERE name ILIKE $2 );`
+	var role []interface{}
+	role = append(role, uuid.New().String(), config.GlobalEnv.EngineRole, time.Now(), config.ProjectDirName)
+	err := repository.InsertOne(ctx, db, sql, role)
 	if err != nil {
-		tx, err = helpers.CreateConnection(dbs)
-		if err != nil {
-			errObj := httpError.InternalServerError{}
-			errObj.Message = err.Error()
-			result.Error = errObj
-			return result
-		}
-		err = h.db.AddBulkConnectionSql(dbs.ID, tx)
-		if err != nil {
-			errObj := httpError.Conflict{}
-			errObj.Message = "cannot add connection to bulk manager connection"
-			result.Error = errObj
-			return result
-		}
-	}
-
-	primaryKey, err := h.engineQuery.FindPrimaryKey(ctx, tx, dbs.Dialect, payload.Table)
-	if err != nil {
-		errObj := httpError.NewNotFound()
-		errObj.Message = "Primary key tidak ditemukan"
-		result.Error = errObj
-		return result
-	}
-	schema, err := h.engineQuery.SelectInformationSchema(ctx, tx, dbs.Dialect, payload.Table)
-	if err != nil {
-		errObj := httpError.NewInternalServerError()
-		errObj.Message = "Internal Server Error"
-		result.Error = errObj
-		return result
-	}
-	sql, args, err := h.SqlStatementInsert(dbs.Dialect, primaryKey, payload, schema)
-	if err != nil {
-		errObj := httpError.NewNotFound()
+		errObj := httpError.NewConflict()
 		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
-	err = h.engineCommand.InsertOne(ctx, tx, sql, args)
+	res, err := repository.FindData(ctx, db, fmt.Sprintf("SELECT id FROM roles WHERE name = '%s'", config.GlobalEnv.EngineRole))
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+	if len(res) > 0 {
+		roleId := res[0]["id"]
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(config.GlobalEnv.EnginePassword), bcrypt.DefaultCost)
+		if err != nil {
+			errObj := httpError.NewBadRequest()
+			errObj.Message = err.Error()
+			result.Error = errObj
+			return result
+		}
+		password := string(hashedPassword)
+		var user []interface{}
+		sql = `INSERT INTO users (id, role_id, username, password, created_at, created_by) SELECT $1, $2, CAST($3 AS VARCHAR), $4, $5, $6 WHERE NOT EXISTS ( SELECT username FROM users WHERE username = $3 );`
+		user = append(user, uuid.New().String(), roleId, config.GlobalEnv.EngineUser, password, time.Now(), config.ProjectDirName)
+		err = repository.InsertOne(ctx, db, sql, user)
+		if err != nil {
+			errObj := httpError.NewConflict()
+			errObj.Message = err.Error()
+			result.Error = errObj
+			return result
+		}
+	}
+	var apps []interface{}
+	sql = `INSERT INTO apps (id, name, created_at, created_by) SELECT $1, CAST($2 AS VARCHAR), $3, $4 WHERE NOT EXISTS ( SELECT name FROM apps WHERE name ILIKE $2 );`
+	apps = append(apps, uuid.New().String(), config.ProjectDirName, time.Now(), config.ProjectDirName)
+	err = repository.InsertOne(ctx, db, sql, apps)
+	if err != nil {
+		errObj := httpError.NewConflict()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+	res, err = repository.FindData(ctx, db, fmt.Sprintf("SELECT id FROM apps WHERE name = '%s'", config.ProjectDirName))
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+	if len(res) > 0 {
+		appId := res[0]["id"]
+		var dbs []interface{}
+		sql = `INSERT INTO dbs (id, app_id, name, host, port, username, password, dialect, created_at, created_by)
+				SELECT $1, $2, CAST($3 AS VARCHAR), CAST($4 AS VARCHAR), $5, CAST($6 AS VARCHAR), CAST($7 AS VARCHAR), CAST($8 AS VARCHAR), $9, $10 
+				WHERE NOT EXISTS ( SELECT id FROM dbs WHERE name = $3 AND host = $4 AND port = $5 AND username = $6 AND password = $7 AND dialect = $8 );`
+		dbs = append(dbs, uuid.New().String(), appId, config.GlobalEnv.DBName, config.GlobalEnv.DBHost, config.GlobalEnv.DBPort, config.GlobalEnv.DBUser, config.GlobalEnv.DBPassword, config.GlobalEnv.DBDialect, time.Now(), config.ProjectDirName)
+		err = repository.InsertOne(ctx, db, sql, dbs)
+		if err != nil {
+			errObj := httpError.NewConflict()
+			errObj.Message = err.Error()
+			result.Error = errObj
+			return result
+		}
+	}
+
+	result.Data = true
+	return result
+}
+
+func (h *EngineCommandUsecase) Insert(ctx context.Context, engineConfig models.EngineConfig, payload *models.EngineRequest) (result utils.Result) {
+	repository := h.repo.GetBulkRepository(engineConfig.Dbs.Dialect)
+	tx, err := h.db.GetBulkConnectionSql(engineConfig.Dbs)
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	primaryKey, err := repository.FindPrimaryKey(ctx, tx, payload.Table)
 	if err != nil {
 		errObj := httpError.NewNotFound()
+		errObj.Message = "Undefined primary key"
+		result.Error = errObj
+		return result
+	}
+	schema, err := repository.SelectInformationSchema(ctx, tx, payload.Table)
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+	sql, args, err := h.SqlStatementInsert(engineConfig, primaryKey, payload, schema)
+	if err != nil {
+		errObj := httpError.NewBadRequest()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+	err = repository.InsertOne(ctx, tx, sql, args)
+	if err != nil {
+		errObj := httpError.NewConflict()
 		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
@@ -82,21 +150,25 @@ func (h *engineCommandUsecase) Insert(ctx context.Context, dbs dbsModels.Dbs, pa
 	return result
 }
 
-func (h *engineCommandUsecase) SqlStatementInsert(dialect string, primaryKey *models.PrimaryKey, payload *models.EngineRequest, informationSchemas []models.InformationSchema) (sql string, args []interface{}, err error) {
+func (h *EngineCommandUsecase) SqlStatementInsert(engineConfig models.EngineConfig, primaryKey *models.PrimaryKey, payload *models.EngineRequest, informationSchemas []models.InformationSchema) (sql string, args []interface{}, err error) {
+	var listColumnReq = payload.Data
+	if len(engineConfig.ResourcesMappingList) > 0 {
+		listColumnReq = helpers.ConvertToSourceOrigin(payload.Data, engineConfig.ResourcesMappingList)
+	}
+
 	var columns, values []string
-	for key := range payload.Data {
+	for key := range listColumnReq {
 		if key != primaryKey.Column {
 			columns = append(columns, key)
 			values = append(values, "?")
-			if payload.Data[key] == nil {
+			if listColumnReq[key] == nil {
 				for _, i := range informationSchemas {
 					if i.IsNullable == "NO" && i.ColumName == key {
-						errorMessage := fmt.Sprintf("validation for '%s' failed on the 'required' tag", i.ColumName)
-						return "", args, errors.New(errorMessage)
+						return "", args, ErrorMessageMapping(i.ColumName, engineConfig.ResourcesMappingList)
 					}
 				}
 			}
-			args = append(args, payload.Data[key])
+			args = append(args, listColumnReq[key])
 		}
 	}
 	if !strings.EqualFold(primaryKey.Format, "int") {
@@ -107,153 +179,243 @@ func (h *engineCommandUsecase) SqlStatementInsert(dialect string, primaryKey *mo
 
 	for _, i := range informationSchemas {
 		if i.IsNullable == "NO" && i.ColumName != primaryKey.Column {
-			if !strings.Contains(strings.Join(columns, ","), i.ColumName) {
-				errorMessage := fmt.Sprintf(": Error:validation for '%s' failed on the 'required' tag", i.ColumName)
-				return "", args, errors.New(errorMessage)
+			if !FindValueInListString(columns, i.ColumName) {
+				return "", args, ErrorMessageMapping(i.ColumName, engineConfig.ResourcesMappingList)
 			}
 		}
 	}
-	sql = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", payload.Table, strings.Join(columns, ","), strings.Join(values, ","))
-	return helpers.SetQuery(dialect, sql), args, nil
+	for i := range columns {
+		columns[i] = fmt.Sprintf("`" + columns[i] + "`")
+	}
+	sql = fmt.Sprintf(utils.QueryInsert, payload.Table, strings.Join(columns, " ,"), strings.Join(values, ","))
+	return helpers.SetQuery(engineConfig.Dbs.Dialect, sql), args, nil
 }
 
-func (h *engineCommandUsecase) Update(ctx context.Context, dbs dbsModels.Dbs, payload *models.EngineRequest) (result utils.Result) {
-	tx, err := h.db.GetBulkConnectionSql(dbs.ID)
-	if err != nil {
-		tx, err = helpers.CreateConnection(dbs)
-		if err != nil {
-			errObj := httpError.InternalServerError{}
-			errObj.Message = err.Error()
-			result.Error = errObj
-			return result
-		}
-		err = h.db.AddBulkConnectionSql(dbs.ID, tx)
-		if err != nil {
-			errObj := httpError.Conflict{}
-			errObj.Message = "cannot add connection to bulk manager connection"
-			result.Error = errObj
-			return result
-		}
-	}
+func (h *EngineCommandUsecase) Update(ctx context.Context, engineConfig models.EngineConfig, payload *models.EngineRequest) (result utils.Result) {
+	repository := h.repo.GetBulkRepository(engineConfig.Dbs.Dialect)
 
-	schema, err := h.engineQuery.SelectInformationSchema(ctx, tx, dbs.Dialect, payload.Table)
+	tx, err := h.db.GetBulkConnectionSql(engineConfig.Dbs)
 	if err != nil {
 		errObj := httpError.NewInternalServerError()
-		errObj.Message = "Internal Server Error"
-		result.Error = errObj
-		return result
-	}
-	isFoundField := false
-	for _, i := range schema {
-		if i.ColumName == payload.FieldId {
-			isFoundField = true
-			break
-		}
-	}
-	if !isFoundField {
-		errObj := httpError.NewInternalServerError()
-		errObj.Message = "field_id '" + payload.FieldId + "' is not found"
-		result.Error = errObj
-		return result
-	}
-
-	primaryKey, err := h.engineQuery.FindPrimaryKey(ctx, tx, dbs.Dialect, payload.Table)
-	if err != nil {
-		errObj := httpError.NewNotFound()
-		errObj.Message = "Primary key tidak ditemukan"
-		result.Error = errObj
-		return result
-	}
-	sql, args, err := h.SqlStatementUpdate(dbs.Dialect, payload, primaryKey, schema)
-	if err != nil {
-		errObj := httpError.NewNotFound()
 		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
 
-	err = h.engineCommand.UpdateOne(ctx, tx, sql, args)
+	schema, err := repository.SelectInformationSchema(ctx, tx, payload.Table)
 	if err != nil {
-		errObj := httpError.NewNotFound()
+		errObj := httpError.NewInternalServerError()
 		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
+	if !CheckFieldId(engineConfig, schema, payload) {
+		errObj := httpError.NewBadRequest()
+		errObj.Message = fmt.Sprintf("field_id '%s' is not found", payload.FieldId)
+		result.Error = errObj
+		return result
+	}
+
+	primaryKey, err := repository.FindPrimaryKey(ctx, tx, payload.Table)
+	if err != nil {
+		errObj := httpError.NewNotFound()
+		errObj.Message = "Undefined primary key"
+		result.Error = errObj
+		return result
+	}
+
+	sql, args, err := h.SqlStatementUpdate(engineConfig, payload, primaryKey, schema)
+	if err != nil {
+		errObj := httpError.NewBadRequest()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	err = repository.UpdateOne(ctx, tx, sql, args)
+	if err != nil {
+		errObj := httpError.NewConflict()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
 	result.Data = payload.Data
 	return result
 }
 
-func (h *engineCommandUsecase) SqlStatementUpdate(dialect string, payload *models.EngineRequest, primaryKey *models.PrimaryKey, informationSchemas []models.InformationSchema) (sql string, args []interface{}, err error) {
-	var setData []string
-	for key := range payload.Data {
+func (h *EngineCommandUsecase) Patch(ctx context.Context, engineConfig models.EngineConfig, payload *models.EngineRequest) (result utils.Result) {
+	repository := h.repo.GetBulkRepository(engineConfig.Dbs.Dialect)
+
+	tx, err := h.db.GetBulkConnectionSql(engineConfig.Dbs)
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	schema, err := repository.SelectInformationSchema(ctx, tx, payload.Table)
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	if !CheckFieldId(engineConfig, schema, payload) {
+		errObj := httpError.NewBadRequest()
+		errObj.Message = fmt.Sprintf("field_id '%s' is not found", payload.FieldId)
+		result.Error = errObj
+		return result
+	}
+
+	primaryKey, err := repository.FindPrimaryKey(ctx, tx, payload.Table)
+	if err != nil {
+		errObj := httpError.NewNotFound()
+		errObj.Message = "Undefined primary key"
+		result.Error = errObj
+		return result
+	}
+
+	sql, args, err := h.SqlStatementPatch(engineConfig, payload, primaryKey, schema)
+	if err != nil {
+		errObj := httpError.NewBadRequest()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	err = repository.UpdateOne(ctx, tx, sql, args)
+	if err != nil {
+		errObj := httpError.NewConflict()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	result.Data = payload.Data
+	return result
+}
+
+func (h *EngineCommandUsecase) SqlStatementUpdate(engineConfig models.EngineConfig, payload *models.EngineRequest, primaryKey *models.PrimaryKey, informationSchemas []models.InformationSchema) (sql string, args []interface{}, err error) {
+	var (
+		setData       []string
+		listColumnReq = payload.Data
+	)
+	if len(engineConfig.ResourcesMappingList) > 0 {
+		listColumnReq = helpers.ConvertToSourceOrigin(payload.Data, engineConfig.ResourcesMappingList)
+	}
+	for _, i := range informationSchemas {
+		if i.ColumName != primaryKey.Column {
+			if i.IsNullable == "NO" && listColumnReq[i.ColumName] == nil {
+				return "", args, ErrorMessageMapping(i.ColumName, engineConfig.ResourcesMappingList)
+			}
+			setData = append(setData, fmt.Sprintf("`%s`=?", i.ColumName))
+			args = append(args, listColumnReq[i.ColumName])
+		}
+	}
+
+	args = append(args, payload.Value)
+	sql = fmt.Sprintf("UPDATE %s SET %s WHERE %s = ?;", payload.Table, strings.Join(setData, ","), payload.FieldId)
+	return helpers.SetQuery(engineConfig.Dbs.Dialect, sql), args, nil
+}
+
+func (h *EngineCommandUsecase) SqlStatementPatch(engineConfig models.EngineConfig, payload *models.EngineRequest, primaryKey *models.PrimaryKey, informationSchemas []models.InformationSchema) (sql string, args []interface{}, err error) {
+	var (
+		setData       []string
+		listColumnReq = payload.Data
+	)
+	if len(engineConfig.ResourcesMappingList) > 0 {
+		listColumnReq = helpers.ConvertToSourceOrigin(payload.Data, engineConfig.ResourcesMappingList)
+	}
+	for key := range listColumnReq {
 		if key != primaryKey.Column {
-			if payload.Data[key] == nil {
+			if listColumnReq[key] == nil {
 				for _, i := range informationSchemas {
 					if i.ColumName == key && i.IsNullable == "NO" {
-						err = fmt.Errorf("validation for '%s' failed on the 'required' tag", i.ColumName)
-						return "", args, err
+						return "", args, ErrorMessageMapping(i.ColumName, engineConfig.ResourcesMappingList)
 					}
 				}
 			}
-			setData = append(setData, fmt.Sprintf("%s=?", key))
-			args = append(args, payload.Data[key])
+			setData = append(setData, fmt.Sprintf("`%s`=?", key))
+			args = append(args, listColumnReq[key])
 		}
 	}
 	args = append(args, payload.Value)
-	sql = fmt.Sprintf("UPDATE %s SET %s WHERE %s = ?;", payload.Table, strings.Join(setData, ","), payload.FieldId)
-	return helpers.SetQuery(dialect, sql), args, nil
+	sql = fmt.Sprintf(utils.QueryUpdate, payload.Table, strings.Join(setData, ","), payload.FieldId)
+	return helpers.SetQuery(engineConfig.Dbs.Dialect, sql), args, nil
 }
 
-func (h *engineCommandUsecase) Delete(ctx context.Context, dbs dbsModels.Dbs, payload *models.EngineRequest) (result utils.Result) {
+func (h *EngineCommandUsecase) Delete(ctx context.Context, engineConfig models.EngineConfig, payload *models.EngineRequest) (result utils.Result) {
 	var args []interface{}
+	repository := h.repo.GetBulkRepository(engineConfig.Dbs.Dialect)
 
-	tx, err := h.db.GetBulkConnectionSql(dbs.ID)
-	if err != nil {
-		tx, err = helpers.CreateConnection(dbs)
-		if err != nil {
-			errObj := httpError.InternalServerError{}
-			errObj.Message = err.Error()
-			result.Error = errObj
-			return result
-		}
-		err = h.db.AddBulkConnectionSql(dbs.ID, tx)
-		if err != nil {
-			errObj := httpError.Conflict{}
-			errObj.Message = "cannot add connection to bulk manager connection"
-			result.Error = errObj
-			return result
-		}
-	}
-
-	schema, err := h.engineQuery.SelectInformationSchema(ctx, tx, dbs.Dialect, payload.Table)
+	tx, err := h.db.GetBulkConnectionSql(engineConfig.Dbs)
 	if err != nil {
 		errObj := httpError.NewInternalServerError()
-		errObj.Message = "Internal Server Error"
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
-	isFoundField := false
-	for _, i := range schema {
-		if i.ColumName == payload.FieldId {
-			isFoundField = true
-			break
-		}
-	}
-	if !isFoundField {
+
+	schema, err := repository.SelectInformationSchema(ctx, tx, payload.Table)
+	if err != nil {
 		errObj := httpError.NewInternalServerError()
-		errObj.Message = "field_id '" + payload.FieldId + "' is not found"
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
-	sql := "DELETE FROM " + payload.Table + " WHERE " + payload.FieldId + " = ?"
+	if !CheckFieldId(engineConfig, schema, payload) {
+		errObj := httpError.NewBadRequest()
+		errObj.Message = fmt.Sprintf("field_id '%s' is not found", payload.FieldId)
+		result.Error = errObj
+		return result
+	}
+	sql := fmt.Sprintf(utils.QueryDelete, payload.Table, payload.FieldId)
 	args = append(args, payload.Value)
-	err = h.engineCommand.DeleteOne(ctx, tx, helpers.SetQuery(dbs.Dialect, sql), args)
+	err = repository.DeleteOne(ctx, tx, helpers.SetQuery(engineConfig.Dbs.Dialect, sql), args)
 	if err != nil {
-		errObj := httpError.NewNotFound()
+		errObj := httpError.NewConflict()
 		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
 	result.Data = payload.FieldId
 	return result
+}
+
+func FindValueInListString(s []string, str string) bool {
+	for i := range s {
+		if s[i] == str {
+			return true
+		}
+	}
+	return false
+}
+
+func ErrorMessageMapping(columnName string, list resourcesMappingModels.ResourcesMappingList) error {
+	validateColumn := columnName
+	for _, rm := range list {
+		if rm.SourceOrigin == columnName {
+			validateColumn = rm.SourceAlias
+			break
+		}
+	}
+	return fmt.Errorf("validation for '%s' failed on the 'required' tag", validateColumn)
+}
+
+func CheckFieldId(engineConfig models.EngineConfig, schema []models.InformationSchema, payload *models.EngineRequest) bool {
+	for i := range engineConfig.ResourcesMappingList {
+		if payload.FieldId == engineConfig.ResourcesMappingList[i].SourceAlias {
+			payload.FieldId = engineConfig.ResourcesMappingList[i].SourceOrigin
+			break
+		}
+	}
+	for _, i := range schema {
+		if i.ColumName == payload.FieldId {
+			return true
+		}
+	}
+	return false
 }

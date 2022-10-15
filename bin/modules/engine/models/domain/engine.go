@@ -1,6 +1,10 @@
 package models
 
-import "engine/bin/pkg/token"
+import (
+	dbsModels "engine/bin/modules/dbs/models/domain"
+	resourcesMappingModels "engine/bin/modules/resources-mapping/models/domain"
+	"engine/bin/pkg/token"
+)
 
 type PrimaryKey struct {
 	Column string
@@ -30,10 +34,10 @@ type GetList struct {
 	Page       *int        `json:"pageNo"`
 	Size       *int        `json:"pageSize"`
 	Sort       string      `json:"sortBy"`
-	IsQuery    bool        `json:"isQuery"`
 	IsDistinct bool        `json:"isDistinct"`
-	Query      string      `json:"query"`
-	Colls      string      `json:"colls"`
+	Filter     string      `json:"filter"`
+	Columns    string      `json:"columns"`
+	Key        string      `json:"key"`
 	Opts       token.Claim `json:"opts"`
 }
 
@@ -43,4 +47,9 @@ type EngineRequest struct {
 	Value   string                 `json:"value"`
 	Data    map[string]interface{} `json:"data"`
 	Opts    token.Claim            `json:"opts"`
+}
+
+type EngineConfig struct {
+	Dbs                  dbsModels.Dbs
+	ResourcesMappingList resourcesMappingModels.ResourcesMappingList
 }

@@ -6,29 +6,34 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"time"
+	"strings"
 )
 
 type Env struct {
-	HTTPPort           uint16
-	AccessTokenExpired time.Duration
-	APISecret          string
-	DBHost             string
-	DBUser             string
-	DBPassword         string
-	DBName             string
-	DBPort             uint16
-	DBSSLMode          string
-	DBDialect          string
+	RootApp          string
+	HTTPPort         uint16
+	EngineApiUrl     string
+	StrictRestfulAPI bool
+	APISecret        string
+	DBHost           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	DBPort           uint16
+	DBSSLMode        string
+	DBDialect        string
+	EngineUser       string
+	EnginePassword   string
+	EngineRole       string
 }
 
 // GlobalEnv global environment
 var GlobalEnv Env
 
-const projectDirName = "crud-engine-be" // change to relevant project name
+const ProjectDirName = "agree-logtan-engine" // change to relevant project name
 
 func loadEnv() {
-	projectName := regexp.MustCompile(`^(.*` + projectDirName + `)`)
+	projectName := regexp.MustCompile(`^(.*` + ProjectDirName + `)`)
 	currentWorkDirectory, _ := os.Getwd()
 	rootPath := projectName.Find([]byte(currentWorkDirectory))
 
@@ -37,6 +42,9 @@ func loadEnv() {
 	if err != nil {
 		log.Println(err)
 	}
+	rootApp := strings.TrimSuffix(currentWorkDirectory, "/bin/config")
+	os.Setenv("APP_PATH", rootApp)
+	GlobalEnv.RootApp = rootApp
 }
 
 func init() {
@@ -54,9 +62,18 @@ func init() {
 	}
 	GlobalEnv.HTTPPort = uint16(port)
 
-	GlobalEnv.AccessTokenExpired, err = time.ParseDuration("100m")
+	GlobalEnv.EngineApiUrl, ok = os.LookupEnv("ENGINE_API_URL")
+	if !ok {
+		panic("missing ENGINE_API_URL environment")
+	}
+
+	strictRestful, ok := os.LookupEnv("STRICT_RESTFUL_API")
+	if !ok {
+		panic("missing STRICT_RESTFUL_API environment")
+	}
+	GlobalEnv.StrictRestfulAPI, err = strconv.ParseBool(strictRestful)
 	if err != nil {
-		panic("failed parsing AccessTokenExpired")
+		panic("failed parsing StrictRestfulAPI")
 	}
 
 	GlobalEnv.APISecret, ok = os.LookupEnv("API_SECRET")
@@ -98,6 +115,21 @@ func init() {
 	GlobalEnv.DBDialect, ok = os.LookupEnv("DB_DIALECT")
 	if !ok {
 		panic("missing DB_DIALECT environment")
+	}
+
+	GlobalEnv.EngineUser, ok = os.LookupEnv("ENGINE_USER_ADMIN")
+	if !ok {
+		panic("missing ENGINE_USER_ADMIN environment")
+	}
+
+	GlobalEnv.EnginePassword, ok = os.LookupEnv("ENGINE_PASSWORD_ADMIN")
+	if !ok {
+		panic("missing ENGINE_PASSWORD_ADMIN environment")
+	}
+
+	GlobalEnv.EngineRole, ok = os.LookupEnv("ENGINE_ROLE")
+	if !ok {
+		panic("missing ENGINE_ROLEs environment")
 	}
 
 }

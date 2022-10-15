@@ -1,7 +1,10 @@
 package databases
 
 import (
+	"database/sql/driver"
 	"engine/bin/config"
+	"engine/bin/pkg/utils"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,9 +30,9 @@ func InitSqlx() *sqlx.DB {
 	}
 
 	switch cfg.Dialect {
-	case "mysql":
+	case utils.DialectMysql:
 		toDNS = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
-	case "postgres":
+	case utils.DialectPostgres:
 		toDNS = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode)
 	default:
 		toDNS = ""
@@ -39,7 +42,7 @@ func InitSqlx() *sqlx.DB {
 	}
 	db, err := sqlx.Connect(cfg.Dialect, toDNS)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create pool connection database %s", cfg.Dialect))
+		panic(err)
 	}
 	db.SetMaxIdleConns(10)
 	db.SetMaxOpenConns(100)
@@ -53,22 +56,26 @@ func InitDbs(cfg SQLXConfig) (*sqlx.DB, error) {
 		err   error
 	)
 	switch cfg.Dialect {
-	case "mysql":
+	case utils.DialectMysql:
 		toDNS = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
-	case "postgres":
+	case utils.DialectPostgres:
 		toDNS = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
 	default:
 		toDNS = ""
 	}
 	if toDNS == "" {
-		return nil, fmt.Errorf("database support only mysql / postgres")
+		return nil, errors.New("database support only mysql / postgres")
 	}
 	db, err := sqlx.Connect(cfg.Dialect, toDNS)
 	if err != nil {
-		return nil, err
+		if err == driver.ErrBadConn {
+			return nil, fmt.Errorf("error establishing '%s' database connection", cfg.Name)
+		} else {
+			return nil, err
+		}
 	}
-	db.SetMaxIdleConns(10)
-	db.SetMaxOpenConns(100)
+	db.SetMaxIdleConns(20)
+	db.SetMaxOpenConns(20)
 	db.SetConnMaxLifetime(time.Hour)
 	return db, nil
 }

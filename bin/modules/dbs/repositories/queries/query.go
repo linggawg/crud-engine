@@ -6,5 +6,5 @@ import (
 )
 
 type DbsPostgre interface {
-	GetByID(ctx context.Context, id string) (dbs *models.Dbs, err error)
+	FindOneByID(ctx context.Context, id string) (dbs *models.Dbs, err error)
 }

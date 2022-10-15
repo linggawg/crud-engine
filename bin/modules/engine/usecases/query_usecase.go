@@ -2,63 +2,77 @@ package usecases
 
 import (
 	"context"
-	dbsModels "engine/bin/modules/dbs/models/domain"
 	"engine/bin/modules/engine/helpers"
 	models "engine/bin/modules/engine/models/domain"
-	"engine/bin/modules/engine/repositories/queries"
-	"engine/bin/pkg/databases"
+	queriesQuery "engine/bin/modules/queries/repositories/queries"
+	servicesQuery "engine/bin/modules/services/repositories/queries"
+	"engine/bin/pkg/databases/connection"
 	httpError "engine/bin/pkg/http-error"
 	"engine/bin/pkg/utils"
+	"fmt"
 	"math"
-	"net/url"
 	"strconv"
+	"strings"
 )
 
-type engineQueryUsecase struct {
-	engineQuery queries.EngineSQL
-	db          *databases.BulkConnectionPkg
+type EngineQueryUsecase struct {
+	queriesQuery  queriesQuery.QueriesPostgre
+	servicesQuery servicesQuery.ServicesPostgre
+	db            connection.Connection
+	repo          *helpers.BulkRepository
 }
 
-func NewQueryUsecase(engineQuery queries.EngineSQL, db databases.BulkConnectionPkg) *engineQueryUsecase {
-	return &engineQueryUsecase{
-		engineQuery: engineQuery,
-		db:          &db,
+func NewQueryUsecase(queriesQuery queriesQuery.QueriesPostgre, servicesQuery servicesQuery.ServicesPostgre, db connection.Connection, repo helpers.BulkRepository) *EngineQueryUsecase {
+	return &EngineQueryUsecase{
+		queriesQuery:  queriesQuery,
+		servicesQuery: servicesQuery,
+		db:            db,
+		repo:          &repo,
 	}
 }
 
-func (h *engineQueryUsecase) Get(ctx context.Context, dbs dbsModels.Dbs, table string, payload *models.GetList) (result utils.Result) {
+func (h *EngineQueryUsecase) Get(ctx context.Context, engineConfig models.EngineConfig, table string, payload *models.GetList) (result utils.Result) {
 	var (
 		sqlStatement string
 		sqlCount     string
+		repository   = h.repo.GetBulkRepository(engineConfig.Dbs.Dialect)
 	)
 
-	tx, err := h.db.GetBulkConnectionSql(dbs.ID)
+	tx, err := h.db.GetBulkConnectionSql(engineConfig.Dbs)
 	if err != nil {
-		tx, err = helpers.CreateConnection(dbs)
-		if err != nil {
-			errObj := httpError.InternalServerError{}
-			errObj.Message = err.Error()
-			result.Error = errObj
-			return result
-		}
-		err = h.db.AddBulkConnectionSql(dbs.ID, tx)
-		if err != nil {
-			errObj := httpError.Conflict{}
-			errObj.Message = "cannot add connection to bulk manager connection"
-			result.Error = errObj
-			return result
-		}
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
 	}
 
-	if payload.IsQuery {
-		table, _ = url.QueryUnescape(table)
-		sqlStatement = table
-		sqlCount = table
+	if payload.Key != "" {
+		queriesModels, err := h.queriesQuery.FindOneByKey(ctx, payload.Key)
+		if err != nil {
+			errObj := httpError.Conflict{}
+			errObj.Message = "key did not exist"
+			result.Error = errObj
+			return result
+		}
+
+		filter := payload.Filter
+		if filter != "" {
+			filter = " WHERE " + filter
+		}
+
+		sqlStatement = queriesModels.QueryDefinition + filter + " "
+		sqlCount = sqlStatement
+
+		servicesModels, _ := h.servicesQuery.FindOneByQueryID(ctx, queriesModels.ID)
+		primaryKey, _ := repository.FindPrimaryKey(ctx, tx, *servicesModels.ServiceUrl)
+		if primaryKey != nil {
+			sqlStatement = setQueryPagination(primaryKey, sqlStatement, payload)
+		}
 	} else {
-		primaryKey, err := h.engineQuery.FindPrimaryKey(ctx, tx, dbs.Dialect, table)
+		primaryKey, err := repository.FindPrimaryKey(ctx, tx, table)
 		if err != nil {
 			errObj := httpError.NewNotFound()
-			errObj.Message = "Primary key tidak ditemukan"
+			errObj.Message = "Undefined primary key"
 			result.Error = errObj
 			return result
 		}
@@ -67,38 +81,53 @@ func (h *engineQueryUsecase) Get(ctx context.Context, dbs dbsModels.Dbs, table s
 			isDistinct = "DISTINCT "
 		}
 
-		query := payload.Query
-		if query != "" {
-			query = " WHERE " + query
+		filter := payload.Filter
+		if filter != "" {
+			filter = "WHERE " + filter
 		}
 
-		colls := payload.Colls
-		if colls == "" {
-			colls = "*"
+		columns := payload.Columns
+		if columns == "" {
+			columns = "*"
 		}
 
-		sqlStatement = "SELECT " + isDistinct + colls + " FROM " + table + query
+		sqlStatement = fmt.Sprintf(utils.QueryGet, isDistinct, columns, table, filter)
 		sqlCount = sqlStatement
-		sqlStatement = setQueryPagination(sqlStatement, primaryKey.Column, payload)
+		sqlStatement = setQueryPagination(primaryKey, sqlStatement, payload)
 	}
 
-	totalItems, err := h.engineQuery.CountData(ctx, tx, sqlCount)
+	totalItems, err := repository.CountData(ctx, tx, sqlCount)
 	if err != nil {
-		errObj := httpError.NewInternalServerError()
+		errObj := httpError.NewUnprocessableEntity()
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
 
-	tableData, err := h.engineQuery.FindData(ctx, tx, sqlStatement)
+	tableData, err := repository.FindData(ctx, tx, sqlStatement)
 	if err != nil {
-		errObj := httpError.NewInternalServerError()
+		errObj := httpError.NewUnprocessableEntity()
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
+	}
+
+	if len(engineConfig.ResourcesMappingList) > 0 {
+		for i, data := range tableData {
+			tableData[i] = helpers.ConvertToSourceAlias(data, engineConfig.ResourcesMappingList)
+		}
 	}
 
 	result.Data = tableData
 	result.MetaData = map[string]interface{}{
-		"page":     payload.Page,
+		"page": func() *int {
+			if payload.Page != nil {
+				if *payload.Page == 0 {
+					*payload.Page = 1
+				}
+			}
+			return payload.Page
+		}(),
 		"quantity": len(tableData),
 		"totalPage": func() *float64 {
 			if payload.Size != nil {
@@ -113,25 +142,35 @@ func (h *engineQueryUsecase) Get(ctx context.Context, dbs dbsModels.Dbs, table s
 	return result
 }
 
-func setQueryPagination(query string, primaryKey string, p *models.GetList) (newQuery string) {
-	if p != nil {
-		if p.Sort != "" {
-			query += " ORDER BY " + p.Sort
-		} else {
-			query += " ORDER BY " + primaryKey + " ASC"
-		}
-		if p.Size != nil {
-			sz := *p.Size
-			size := strconv.Itoa(sz)
-			query += " LIMIT " + size
-			if p.Page != nil {
-				pg := *p.Page
-				page := (pg - 1) * sz
-				if page > 0 {
-					query += " OFFSET " + strconv.Itoa(page)
-				}
+func setQueryPagination(pk *models.PrimaryKey, query string, p *models.GetList) (newQuery string) {
+	var (
+		pagination string
+		page       int
+		size       int
+	)
+	if p.Sort != "" {
+		query += fmt.Sprintf(" ORDER BY %s ", p.Sort)
+	}
+	if p.Size != nil {
+		size = *p.Size
+		if p.Page != nil {
+			page = (*p.Page - 1) * size
+			if page < 0 {
+				page = 0
 			}
 		}
+
+		if p.Sort == "" && strings.EqualFold(pk.Format, "int") {
+			if p.Filter != "" {
+				pagination = fmt.Sprintf("AND "+utils.QueryPaginationOrdinal, pk.Column, strconv.Itoa(page), pk.Column, strconv.Itoa(size))
+			} else {
+				pagination = fmt.Sprintf("WHERE "+utils.QueryPaginationOrdinal, pk.Column, strconv.Itoa(page), pk.Column, strconv.Itoa(size))
+			}
+		} else {
+			pagination = fmt.Sprintf(utils.QueryPaginationDefault, strconv.Itoa(size), strconv.Itoa(page))
+		}
+
+		return query + pagination
 	}
 	return query
 }

@@ -1,11 +1,8 @@
 {
-    "schemes": [
-        "http"
-    ],
     "swagger": "2.0",
     "info": {
         "description": "This is a sample server server.",
-        "title": "Echo Swagger Example API",
+        "title": "Echo Swagger Engine Services",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
             "name": "API Support",
@@ -18,8 +15,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:3000",
-    "basePath": "/",
+    "basePath": "/engine/",
     "paths": {
         "/": {
             "get": {
@@ -45,7 +41,7 @@
                 }
             }
         },
-        "/login": {
+        "/v1/login": {
             "post": {
                 "description": "Login api",
                 "consumes": [
@@ -61,7 +57,7 @@
                 "parameters": [
                     {
                         "description": "JSON request body based on column name",
-                        "name": "insertRequest",
+                        "name": "ReqLogin",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -79,7 +75,7 @@
                 }
             }
         },
-        "/register": {
+        "/v1/register": {
             "post": {
                 "description": "Register new user for login",
                 "consumes": [
@@ -95,7 +91,7 @@
                 "parameters": [
                     {
                         "description": "JSON request body based on column name",
-                        "name": "insertRequest",
+                        "name": "ReqUser",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -113,7 +109,122 @@
                 }
             }
         },
-        "/sql/{table}": {
+        "/v1/services/default": {
+            "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Delete all services by services url",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Delete Default services",
+                "parameters": [
+                    {
+                        "description": "JSON request body based on column name, required service_url",
+                        "name": "UsersServicesRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ServicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users-services/default": {
+            "post": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Generate Default services GET, POST, PUT, PATCH, DELETE and create users services",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Generate Default services and users-services",
+                "parameters": [
+                    {
+                        "description": "JSON request body based on column name, required service_url, user_id, db_id",
+                        "name": "UsersServicesRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UsersServicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Delete all users-services by user_id and services_url",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Delete Default users-services",
+                "parameters": [
+                    {
+                        "description": "JSON request body based on column name, required service_url, user_id",
+                        "name": "UsersServicesRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UsersServicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/{table}": {
             "get": {
                 "security": [
                     {
@@ -128,7 +239,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
                 "summary": "Find all Data",
                 "parameters": [
@@ -140,9 +251,9 @@
                         "required": true
                     },
                     {
-                        "type": "boolean",
-                        "description": "if isQuery is true, the sql query statement is fetched directly from the path table",
-                        "name": "isQuery",
+                        "type": "string",
+                        "description": "key id of queries",
+                        "name": "key",
                         "in": "query"
                     },
                     {
@@ -154,13 +265,13 @@
                     {
                         "type": "string",
                         "description": "column name (ex : username, email)",
-                        "name": "colls",
+                        "name": "columns",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "where condition query sql",
-                        "name": "query",
+                        "name": "filter",
                         "in": "query"
                     },
                     {
@@ -205,7 +316,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
                 "summary": "Insert Data",
                 "parameters": [
@@ -237,14 +348,14 @@
                 }
             }
         },
-        "/sql/{table}/{id}": {
+        "/v1/{table}/{value}": {
             "put": {
                 "security": [
                     {
                         "Authorization": []
                     }
                 ],
-                "description": "Update data by ID (primary key) and data by column name in format JSON",
+                "description": "Update data by field_id and data by column name in format JSON, Requires sending complete data from the table, so that when there is data that is not sent it will be changed to the default value",
                 "consumes": [
                     "application/json"
                 ],
@@ -252,9 +363,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
-                "summary": "Update Data",
+                "summary": "Put Update Data",
                 "parameters": [
                     {
                         "type": "string",
@@ -265,9 +376,16 @@
                     },
                     {
                         "type": "string",
-                        "description": "Primary Key",
-                        "name": "id",
+                        "description": "Value of id",
+                        "name": "value",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Update based on field_id ",
+                        "name": "field_id",
+                        "in": "query",
                         "required": true
                     },
                     {
@@ -296,7 +414,7 @@
                         "Authorization": []
                     }
                 ],
-                "description": "Delete data by ID (primary key)",
+                "description": "Delete data by field_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -304,7 +422,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
                 "summary": "Delete Data",
                 "parameters": [
@@ -317,10 +435,76 @@
                     },
                     {
                         "type": "string",
-                        "description": "Primary Key",
-                        "name": "id",
+                        "description": "Value Of id",
+                        "name": "value",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Delete based on field_id ",
+                        "name": "field_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Update data by field_id and data by column name in format JSON, Can accept changes to only one field",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Engine"
+                ],
+                "summary": "Patch Update Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table Name",
+                        "name": "table",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Value of id",
+                        "name": "value",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Update based on field_id ",
+                        "name": "field_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "JSON request body based on column name",
+                        "name": "updateRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 ],
                 "responses": {
@@ -338,14 +522,18 @@
         "models.ReqLogin": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "duration",
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string"
+                "duration": {
+                    "type": "integer"
                 },
                 "password": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }
@@ -353,21 +541,70 @@
         "models.ReqUser": {
             "type": "object",
             "required": [
-                "email",
                 "password",
+                "role_id",
                 "username"
             ],
             "properties": {
-                "email": {
+                "password": {
                     "type": "string"
                 },
-                "password": {
+                "role_id": {
                     "type": "string"
                 },
                 "userid": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ServicesRequest": {
+            "type": "object",
+            "required": [
+                "service_url"
+            ],
+            "properties": {
+                "opts": {
+                    "$ref": "#/definitions/token.Claim"
+                },
+                "service_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UsersServicesRequest": {
+            "type": "object",
+            "required": [
+                "service_url",
+                "user_id"
+            ],
+            "properties": {
+                "db_id": {
+                    "type": "string"
+                },
+                "opts": {
+                    "$ref": "#/definitions/token.Claim"
+                },
+                "service_url": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "token.Claim": {
+            "type": "object",
+            "properties": {
+                "authorization": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "userId": {
                     "type": "string"
                 }
             }
@@ -382,6 +619,7 @@
                 "message": {
                     "type": "string"
                 },
+                "meta": {},
                 "success": {
                     "type": "boolean"
                 }

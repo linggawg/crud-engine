@@ -6,6 +6,6 @@ import (
 )
 
 type ServicesPostgre interface {
-	GetByServiceUrlAndMethod(ctx context.Context, serviceUrl, method string) (services *models.Services, err error)
-	GetByServiceDefinitionAndMethod(ctx context.Context, serviceDefinition, method string) (services *models.Services, err error)
+	FindOneByQueryID(ctx context.Context, queryID string) (services *models.Services, err error)
+	FindOneByServiceUrlAndMethodAndQueryIsNull(ctx context.Context, serviceUrl, method string) (services *models.Services, err error)
 }

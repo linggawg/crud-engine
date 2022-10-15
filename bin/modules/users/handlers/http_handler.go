@@ -3,41 +3,39 @@ package handlers
 import (
 	"encoding/json"
 	"engine/bin/middleware"
+	rolesQueries "engine/bin/modules/roles/repositories/queries"
 	models "engine/bin/modules/users/models/domain"
 	"engine/bin/modules/users/repositories/commands"
 	"engine/bin/modules/users/repositories/queries"
 	"engine/bin/modules/users/usecases"
 	conn "engine/bin/pkg/databases"
 	"engine/bin/pkg/utils"
-	"log"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 )
 
 type HttpSqlx struct {
-	db             *sqlx.DB
-	commandUsecase usecases.CommandUsecase
+	CommandUsecase usecases.CommandUsecase
 }
 
 func New() *HttpSqlx {
 	db := conn.InitSqlx()
+	rolesPostgreQuery := rolesQueries.NewRolesQuery(db)
 	postgreQuery := queries.NewUsersQuery(db)
 	postgreCommand := commands.NewUsersCommand(db)
-	commandUsecase := usecases.NewCommandUsecase(postgreCommand, postgreQuery)
+	commandUsecase := usecases.NewUsersCommandUsecase(postgreCommand, postgreQuery, rolesPostgreQuery)
 
 	return &HttpSqlx{
-		db:             db,
-		commandUsecase: commandUsecase,
+		CommandUsecase: commandUsecase,
 	}
 }
 
 // Mount function
 func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
-	echoGroup.POST("/login", h.Login, middleware.NoAuth())
-	echoGroup.POST("/register", h.RegisterUser, middleware.NoAuth())
+	echoGroup.POST("/v1/login", h.Login, middleware.NoAuth())
+	echoGroup.POST("/v1/register", h.RegisterUser, middleware.VerifyBearer())
 }
 
 // Post Login godoc
@@ -46,9 +44,9 @@ func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
-// @Param		 insertRequest body models.ReqLogin true "JSON request body based on column name"
+// @Param		 ReqLogin body models.ReqLogin true "JSON request body based on column name"
 // @Success      200  {object} utils.BaseWrapperModel
-// @Router       /login [post]
+// @Router       /v1/login [post]
 // Login function
 func (h *HttpSqlx) Login(c echo.Context) error {
 	var (
@@ -56,19 +54,17 @@ func (h *HttpSqlx) Login(c echo.Context) error {
 	)
 	err := json.NewDecoder(c.Request().Body).Decode(&params)
 	if err != nil {
-		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	err = validator.New().Struct(params)
 	if err != nil {
-		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
-	result := h.commandUsecase.Login(c.Request().Context(), params)
+	result := h.CommandUsecase.Login(c.Request().Context(), params)
 	if result.Error != nil {
-		return utils.Response(nil, "Login failed", http.StatusBadRequest, c)
+		return utils.ResponseError(result.Error, c)
 	}
 
 	return utils.Response(result.Data, "Login User", http.StatusOK, c)
@@ -80,28 +76,29 @@ func (h *HttpSqlx) Login(c echo.Context) error {
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
-// @Param		 insertRequest body models.ReqUser true "JSON request body based on column name"
+// @Param		 ReqUser body models.ReqUser true "JSON request body based on column name"
 // @Success      200  {object} utils.BaseWrapperModel
-// @Router       /register [post]
+// @Router       /v1/register [post]
 func (h *HttpSqlx) RegisterUser(c echo.Context) error {
 	var (
 		params models.ReqUser
 	)
 	err := json.NewDecoder(c.Request().Body).Decode(&params)
 	if err != nil {
-		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
 	err = validator.New().Struct(params)
 	if err != nil {
-		log.Println(err)
 		return utils.Response(nil, err.Error(), http.StatusBadRequest, c)
 	}
 
-	result := h.commandUsecase.RegisterUser(c.Request().Context(), params)
+	header, _ := json.Marshal(c.Get("opts"))
+	json.Unmarshal(header, &params.Opts)
+
+	result := h.CommandUsecase.RegisterUser(c.Request().Context(), params)
 	if result.Error != nil {
-		return utils.Response(nil, "Register failed", http.StatusBadRequest, c)
+		return utils.ResponseError(result.Error, c)
 	}
 
 	return utils.Response(result.Data, "Register User", http.StatusCreated, c)

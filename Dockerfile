@@ -1,11 +1,18 @@
-FROM golang:alpine
+FROM golang:1.18
 
-RUN apk update && apk add --no-cache git
+WORKDIR /usr/src/app
 
-WORKDIR /app
+# Update package
+# RUN apk add --update --no-cache --virtual .build-dev build-base git
+RUN apt-get update
 
 COPY . .
 
-RUN go mod tidy && go install && go build -o binary
+RUN make install \
+  && make build
 
-CMD ["/app/binary"]
+# Expose port
+EXPOSE 9000
+
+# Run application
+CMD ["make", "start"]

@@ -3,7 +3,9 @@ package main
 import (
 	"engine/bin/config"
 	_ "engine/bin/docs"
-	"engine/bin/modules/engine/handlers"
+	engineHandler "engine/bin/modules/engine/handlers"
+	servicesHandler "engine/bin/modules/services/handlers"
+	usersServicesHandler "engine/bin/modules/users-services/handlers"
 	usersHandler "engine/bin/modules/users/handlers"
 	"fmt"
 	"log"
@@ -19,7 +21,7 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-// @title Echo Swagger Example API
+// @title Echo Swagger Engine Services
 // @version 1.0
 // @description This is a sample server server.
 // @termsOfService http://swagger.io/terms/
@@ -31,9 +33,7 @@ func init() {
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host localhost:3000
-// @BasePath /
-// @schemes http
+// @BasePath /engine/
 
 // @securityDefinitions.apikey Authorization
 // @in header
@@ -48,18 +48,29 @@ func main() {
 	e.Use(middleware.CORS())
 
 	// Routes
-	e.GET("/", HealthCheck)
-	e.GET("/swagger/*", echoSwagger.WrapHandler)
+	e.GET("/engine/", HealthCheck)
+	e.GET("/engine/swagger/*", echoSwagger.WrapHandler)
 
 	//initiate auth http handler
-	usersHandler.New().Mount(e.Group(""))
+	engineGroup := e.Group("/engine")
 
-	//initiate user http handler
-	handlers.New().Mount(e.Group("/engine"))
+	//initiate services http handler
+	servicesHTTP := servicesHandler.New()
+	servicesHTTP.Mount(engineGroup)
+
+	//initiate users http handler
+	usersHTTP := usersHandler.New()
+	usersHTTP.Mount(engineGroup)
+
+	//initiate services http handler
+	usersServicesHTTP := usersServicesHandler.New()
+	usersServicesHTTP.Mount(engineGroup)
+
+	//initiate engine http handler
+	engineHTTP := engineHandler.New()
+	engineHTTP.Mount(engineGroup)
 
 	listenerPort := fmt.Sprintf(":%d", config.GlobalEnv.HTTPPort)
-	log.Println("Webserver successfully started")
-	log.Println("Listening to port ", config.GlobalEnv.HTTPPort)
 	e.Logger.Fatal(e.Start(listenerPort))
 }
 

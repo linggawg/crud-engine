@@ -3,6 +3,8 @@ package queries
 import (
 	"context"
 	models "engine/bin/modules/users/models/domain"
+	"errors"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -15,13 +17,13 @@ func NewUsersQuery(db *sqlx.DB) *UsersPostgreQuery {
 	return &UsersPostgreQuery{db}
 }
 
-func (s *UsersPostgreQuery) GetByID(ctx context.Context, id string) (users *models.Users, err error) {
-	var u models.Users
+func (s *UsersPostgreQuery) FindOneByID(ctx context.Context, id string) (users *models.Users, err error) {
+	var user models.Users
 	query := `
 	SELECT
 		id,
+		role_id,
 		username,
-		email,
 		password,
 		created_at,
 		created_by,
@@ -31,20 +33,28 @@ func (s *UsersPostgreQuery) GetByID(ctx context.Context, id string) (users *mode
 		users
 	WHERE id = $1
 		`
-	err = s.db.GetContext(ctx, &u, query, id)
+
+	err = s.db.PingContext(ctx)
 	if err != nil {
+		log.Println(err)
+		return nil, errors.New("error establishing a database connection")
+	}
+
+	err = s.db.GetContext(ctx, &user, query, id)
+	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
-	return &u, nil
+	return &user, nil
 }
 
-func (s *UsersPostgreQuery) GetByEmail(ctx context.Context, email string) (users *models.Users, err error) {
-	var u models.Users
+func (s *UsersPostgreQuery) FindOneByUsername(ctx context.Context, username string) (users *models.Users, err error) {
+	var user models.Users
 	query := `
 	SELECT
 		id,
+		role_id,
 		username,
-		email,
 		password,
 		created_at,
 		created_by,
@@ -52,11 +62,19 @@ func (s *UsersPostgreQuery) GetByEmail(ctx context.Context, email string) (users
 		modified_by
 	FROM
 		users
-	WHERE email = $1
+	WHERE username = $1
 		`
-	err = s.db.GetContext(ctx, &u, query, email)
+
+	err = s.db.PingContext(ctx)
 	if err != nil {
+		log.Println(err)
+		return nil, errors.New("error establishing a database connection")
+	}
+
+	err = s.db.GetContext(ctx, &user, query, username)
+	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
-	return &u, nil
+	return &user, nil
 }

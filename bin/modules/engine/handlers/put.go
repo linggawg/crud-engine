@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	dbsModels "engine/bin/modules/dbs/models/domain"
+	"engine/bin/config"
 	models "engine/bin/modules/engine/models/domain"
 	httpError "engine/bin/pkg/http-error"
 	"engine/bin/pkg/utils"
@@ -12,17 +12,18 @@ import (
 )
 
 // Put UpdateData godoc
-// @Summary      Update Data
-// @Description  Update data by ID (primary key) and data by column name in format JSON
-// @Tags         CrudEngine
+// @Summary      Put Update Data
+// @Description  Update data by field_id and data by column name in format JSON, Requires sending complete data from the table, so that when there is data that is not sent it will be changed to the default value
+// @Tags         Engine
 // @Accept       json
 // @Produce      json
 // @Param        table   path    string  true  "Table Name"
-// @Param        id   path    string  true  "Primary Key"
+// @Param        value   path    string  true  "Value of id"
+// @Param        field_id    query     string  true  "Update based on field_id "
 // @Param		 updateRequest body map[string]interface{} true "JSON request body based on column name"
-// @Security Authorization
+// @Security     Authorization
 // @Success      200  {object} utils.BaseWrapperModel
-// @Router       /sql/{table}/{id} [put]
+// @Router       /v1/{table}/{value} [put]
 func (h *EngineHTTPHandler) Put(c echo.Context) error {
 	var (
 		jsonBody map[string]interface{}
@@ -31,7 +32,7 @@ func (h *EngineHTTPHandler) Put(c echo.Context) error {
 
 	err := json.NewDecoder(c.Request().Body).Decode(&jsonBody)
 	if err != nil {
-		errObj := httpError.NewInternalServerError()
+		errObj := httpError.NewBadRequest()
 		errObj.Message = err.Error()
 		return utils.ResponseError(errObj, c)
 	}
@@ -43,15 +44,19 @@ func (h *EngineHTTPHandler) Put(c echo.Context) error {
 	}
 	json.Unmarshal(header, &payload.Opts)
 
-	result := h.dbsQueryUsecase.GetDbsConnection(c.Request().Context(), payload.Opts.UserID, c.Request().Method, payload.Table, false)
+	result := h.DbsQueryUsecase.GetDbsConnection(c.Request().Context(), payload.Opts.UserID, c.Request().Method, payload.Table, "")
 	if result.Error != nil {
 		return utils.ResponseError(result.Error, c)
 	}
-	var dbsConn dbsModels.Dbs
+	var engineConfig models.EngineConfig
 	byteSub, _ := json.Marshal(result.Data)
-	json.Unmarshal(byteSub, &dbsConn)
+	json.Unmarshal(byteSub, &engineConfig)
 
-	result = h.engineCommandUsecase.Update(c.Request().Context(), dbsConn, payload)
+	if config.GlobalEnv.StrictRestfulAPI {
+		result = h.EngineCommandUsecase.Update(c.Request().Context(), engineConfig, payload)
+	} else {
+		result = h.EngineCommandUsecase.Patch(c.Request().Context(), engineConfig, payload)
+	}
 	if result.Error != nil {
 		return utils.ResponseError(result.Error, c)
 	}

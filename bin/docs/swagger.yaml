@@ -1,29 +1,64 @@
-basePath: /
+basePath: /engine/
 definitions:
   models.ReqLogin:
     properties:
-      email:
-        type: string
+      duration:
+        type: integer
       password:
         type: string
+      username:
+        type: string
     required:
-    - email
+    - duration
     - password
+    - username
     type: object
   models.ReqUser:
     properties:
-      email:
-        type: string
       password:
+        type: string
+      role_id:
         type: string
       userid:
         type: string
       username:
         type: string
     required:
-    - email
     - password
+    - role_id
     - username
+    type: object
+  models.ServicesRequest:
+    properties:
+      opts:
+        $ref: '#/definitions/token.Claim'
+      service_url:
+        type: string
+    required:
+    - service_url
+    type: object
+  models.UsersServicesRequest:
+    properties:
+      db_id:
+        type: string
+      opts:
+        $ref: '#/definitions/token.Claim'
+      service_url:
+        type: string
+      user_id:
+        type: string
+    required:
+    - service_url
+    - user_id
+    type: object
+  token.Claim:
+    properties:
+      authorization:
+        type: string
+      roleName:
+        type: string
+      userId:
+        type: string
     type: object
   utils.BaseWrapperModel:
     properties:
@@ -32,10 +67,10 @@ definitions:
       data: {}
       message:
         type: string
+      meta: {}
       success:
         type: boolean
     type: object
-host: localhost:3000
 info:
   contact:
     email: support@swagger.io
@@ -46,7 +81,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
-  title: Echo Swagger Example API
+  title: Echo Swagger Engine Services
   version: "1.0"
 paths:
   /:
@@ -65,51 +100,7 @@ paths:
       summary: Show the status of server.
       tags:
       - HealthCheck
-  /login:
-    post:
-      consumes:
-      - application/json
-      description: Login api
-      parameters:
-      - description: JSON request body based on column name
-        in: body
-        name: insertRequest
-        required: true
-        schema:
-          $ref: '#/definitions/models.ReqLogin'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.BaseWrapperModel'
-      summary: Login
-      tags:
-      - Auth
-  /register:
-    post:
-      consumes:
-      - application/json
-      description: Register new user for login
-      parameters:
-      - description: JSON request body based on column name
-        in: body
-        name: insertRequest
-        required: true
-        schema:
-          $ref: '#/definitions/models.ReqUser'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.BaseWrapperModel'
-      summary: Register
-      tags:
-      - Auth
-  /sql/{table}:
+  /v1/{table}:
     get:
       consumes:
       - application/json
@@ -120,11 +111,10 @@ paths:
         name: table
         required: true
         type: string
-      - description: if isQuery is true, the sql query statement is fetched directly
-          from the path table
+      - description: key id of queries
         in: query
-        name: isQuery
-        type: boolean
+        name: key
+        type: string
       - description: ' DISTINCT statement is used to return only distinct (different)
           values. '
         in: query
@@ -132,11 +122,11 @@ paths:
         type: boolean
       - description: 'column name (ex : username, email)'
         in: query
-        name: colls
+        name: columns
         type: string
       - description: where condition query sql
         in: query
-        name: query
+        name: filter
         type: string
       - description: limit per page
         in: query
@@ -161,7 +151,7 @@ paths:
       - Authorization: []
       summary: Find all Data
       tags:
-      - CrudEngine
+      - Engine
     post:
       consumes:
       - application/json
@@ -190,21 +180,26 @@ paths:
       - Authorization: []
       summary: Insert Data
       tags:
-      - CrudEngine
-  /sql/{table}/{id}:
+      - Engine
+  /v1/{table}/{value}:
     delete:
       consumes:
       - application/json
-      description: Delete data by ID (primary key)
+      description: Delete data by field_id
       parameters:
       - description: Table Name
         in: path
         name: table
         required: true
         type: string
-      - description: Primary Key
+      - description: Value Of id
         in: path
-        name: id
+        name: value
+        required: true
+        type: string
+      - description: 'Delete based on field_id '
+        in: query
+        name: field_id
         required: true
         type: string
       produces:
@@ -218,21 +213,26 @@ paths:
       - Authorization: []
       summary: Delete Data
       tags:
-      - CrudEngine
-    put:
+      - Engine
+    patch:
       consumes:
       - application/json
-      description: Update data by ID (primary key) and data by column name in format
-        JSON
+      description: Update data by field_id and data by column name in format JSON,
+        Can accept changes to only one field
       parameters:
       - description: Table Name
         in: path
         name: table
         required: true
         type: string
-      - description: Primary Key
+      - description: Value of id
         in: path
-        name: id
+        name: value
+        required: true
+        type: string
+      - description: 'Update based on field_id '
+        in: query
+        name: field_id
         required: true
         type: string
       - description: JSON request body based on column name
@@ -251,11 +251,168 @@ paths:
             $ref: '#/definitions/utils.BaseWrapperModel'
       security:
       - Authorization: []
-      summary: Update Data
+      summary: Patch Update Data
       tags:
-      - CrudEngine
-schemes:
-- http
+      - Engine
+    put:
+      consumes:
+      - application/json
+      description: Update data by field_id and data by column name in format JSON,
+        Requires sending complete data from the table, so that when there is data
+        that is not sent it will be changed to the default value
+      parameters:
+      - description: Table Name
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: Value of id
+        in: path
+        name: value
+        required: true
+        type: string
+      - description: 'Update based on field_id '
+        in: query
+        name: field_id
+        required: true
+        type: string
+      - description: JSON request body based on column name
+        in: body
+        name: updateRequest
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
+      summary: Put Update Data
+      tags:
+      - Engine
+  /v1/login:
+    post:
+      consumes:
+      - application/json
+      description: Login api
+      parameters:
+      - description: JSON request body based on column name
+        in: body
+        name: ReqLogin
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      summary: Login
+      tags:
+      - Auth
+  /v1/register:
+    post:
+      consumes:
+      - application/json
+      description: Register new user for login
+      parameters:
+      - description: JSON request body based on column name
+        in: body
+        name: ReqUser
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      summary: Register
+      tags:
+      - Auth
+  /v1/services/default:
+    delete:
+      consumes:
+      - application/json
+      description: Delete all services by services url
+      parameters:
+      - description: JSON request body based on column name, required service_url
+        in: body
+        name: UsersServicesRequest
+        required: true
+        schema:
+          $ref: '#/definitions/models.ServicesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
+      summary: Delete Default services
+      tags:
+      - Services
+  /v1/users-services/default:
+    delete:
+      consumes:
+      - application/json
+      description: Delete all users-services by user_id and services_url
+      parameters:
+      - description: JSON request body based on column name, required service_url,
+          user_id
+        in: body
+        name: UsersServicesRequest
+        required: true
+        schema:
+          $ref: '#/definitions/models.UsersServicesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
+      summary: Delete Default users-services
+      tags:
+      - Services
+    post:
+      consumes:
+      - application/json
+      description: Generate Default services GET, POST, PUT, PATCH, DELETE and create
+        users services
+      parameters:
+      - description: JSON request body based on column name, required service_url,
+          user_id, db_id
+        in: body
+        name: UsersServicesRequest
+        required: true
+        schema:
+          $ref: '#/definitions/models.UsersServicesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.BaseWrapperModel'
+      security:
+      - Authorization: []
+      summary: Generate Default services and users-services
+      tags:
+      - Services
 securityDefinitions:
   Authorization:
     in: header

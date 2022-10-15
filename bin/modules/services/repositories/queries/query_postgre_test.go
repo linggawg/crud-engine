@@ -2,123 +2,117 @@ package queries_test
 
 import (
 	"context"
-	"database/sql"
 	models "engine/bin/modules/services/models/domain"
 	"engine/bin/modules/services/repositories/queries"
+	"log"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/guregu/null.v4"
 )
 
-var (
-	serviceDefinition = "SELECT id FROM user"
-	serviceUrl        = "user"
-	mockServicesList  = models.ServicesList{
-		models.Services{
-			ID:                "20bd16be-7f64-4281-9b58-758ecc7098b9",
-			DbID:              "33d2a2b4-463f-4a27-aaac-d90fbfe6ebd2",
-			Method:            "GET",
-			ServiceUrl:        &serviceUrl,
-			ServiceDefinition: &serviceDefinition,
-			IsQuery:           false,
-			CreatedAt:         null.TimeFrom(time.Now()),
-			CreatedBy:         "93147c1d-197e-4556-9d24-1992196aaa03",
-			ModifiedAt:        null.TimeFrom(time.Now()),
-			ModifiedBy:        "93147c1d-197e-4556-9d24-1992196aaa03",
-		},
-		models.Services{
-			ID:                "18a53750-d3e2-4e5a-9d0c-e88d368509f7",
-			DbID:              "33d2a2b4-463f-4a27-aaac-d90fbfe6ebd2",
-			Method:            "GET",
-			ServiceUrl:        &serviceUrl,
-			ServiceDefinition: &serviceDefinition,
-			IsQuery:           false,
-			CreatedAt:         null.TimeFrom(time.Now()),
-			CreatedBy:         "93147c1d-197e-4556-9d24-1992196aaa03",
-			ModifiedAt:        null.TimeFrom(time.Now()),
-			ModifiedBy:        "93147c1d-197e-4556-9d24-1992196aaa03",
-		},
-	}
-)
-
-func TestGetByServiceUrlAndMethod(t *testing.T) {
-	db, mock, err := sqlmock.New()
+func NewMock() (*sqlx.DB, sqlmock.Sqlmock) {
+	mockDb, mock, err := sqlmock.New()
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub databases connection", err)
+		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "service_definition", "is_query", "created_at", "created_by", "modified_at", "modified_by"})
-	for _, i := range mockServicesList {
-		rows.AddRow(i.ID, i.DbID, i.Method, i.ServiceUrl, i.ServiceDefinition, i.IsQuery, i.CreatedAt, i.CreatedBy, i.ModifiedAt, i.ModifiedBy)
-	}
-
-	query := "SELECT id, db_id, service_url, method, service_definition, is_query FROM services WHERE service_url = \\$1 AND method = \\$2"
-	mock.ExpectQuery(query).WithArgs(mockServicesList[0].ServiceUrl, mockServicesList[0].Method).WillReturnRows(rows)
-	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := queries.NewServicesQuery(sqlxDB)
-
-	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), *mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
-	assert.NoError(t, err)
-	assert.NotNil(t, mService)
+	db := sqlx.NewDb(mockDb, "sqlmock")
+	return db, mock
 }
 
-func TestGetByServiceUrlAndMethodNoRow(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub databases connection", err)
-	}
-
-	rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "service_definition", "is_query", "created_at", "created_by", "modified_at", "modified_by"})
-	query := "SELECT id, db_id, service_url, method, service_definition, is_query FROM services WHERE service_url = \\$1 AND method = \\$2"
-	mock.ExpectQuery(query).WithArgs(mockServicesList[0].ServiceUrl, mockServicesList[0].Method).WillReturnRows(rows)
-	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := queries.NewServicesQuery(sqlxDB)
-
-	mService, err := a.GetByServiceUrlAndMethod(context.TODO(), *mockServicesList[0].ServiceUrl, mockServicesList[0].Method)
-	assert.Empty(t, mService)
-	assert.Error(t, err)
-	assert.Equal(t, err, sql.ErrNoRows)
+var random = uuid.New().String()
+var services = &models.Services{
+	ID:         random,
+	DbID:       random,
+	QueryID:    &random,
+	Method:     random,
+	ServiceUrl: &random,
+	CreatedAt:  null.TimeFrom(time.Now()),
+	CreatedBy:  &random,
+	ModifiedAt: null.TimeFrom(time.Now()),
+	ModifiedBy: &random,
 }
 
-func TestGetByServiceDefinitionAndMethod(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub databases connection", err)
-	}
+func TestFindOneByServiceUrlAndMethodAndQueryIsNull(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		db, mock := NewMock()
 
-	rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "service_definition", "is_query", "created_at", "created_by", "modified_at", "modified_by"})
-	for _, i := range mockServicesList {
-		rows.AddRow(i.ID, i.DbID, i.Method, i.ServiceUrl, i.ServiceDefinition, i.IsQuery, i.CreatedAt, i.CreatedBy, i.ModifiedAt, i.ModifiedBy)
-	}
+		query := "SELECT id, db_id, query_id, service_url, method, created_at, created_by, modified_at, modified_by FROM services WHERE service_url = $1 AND method = $2"
 
-	query := "SELECT id, db_id, service_url, method, service_definition, is_query FROM services WHERE is_query = true AND service_definition = \\$1 AND method = \\$2"
-	mock.ExpectQuery(query).WithArgs(mockServicesList[0].ServiceDefinition, mockServicesList[0].Method).WillReturnRows(rows)
-	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := queries.NewServicesQuery(sqlxDB)
+		rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "created_at", "created_by", "modified_at", "modified_by"}).
+			AddRow(services.ID, services.DbID, services.Method, services.ServiceUrl, services.CreatedAt, services.CreatedBy, services.ModifiedAt, services.ModifiedBy)
 
-	mService, err := a.GetByServiceDefinitionAndMethod(context.TODO(), *mockServicesList[0].ServiceDefinition, mockServicesList[0].Method)
-	assert.NoError(t, err)
-	assert.NotNil(t, mService)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(services.ServiceUrl, services.Method).WillReturnRows(rows)
+
+		entity, err := queries.NewServicesQuery(db).FindOneByServiceUrlAndMethodAndQueryIsNull(context.TODO(), *services.ServiceUrl, services.Method)
+		assert.NotNil(t, entity)
+		assert.NoError(t, err)
+	})
+	t.Run("Error", func(t *testing.T) {
+		db, mock := NewMock()
+
+		query := "SELECT id, db_id, query_id, service_url, method, created_at, created_by, modified_at, modified_by FROM services WHERE service_url = $1 AND method = $2"
+
+		rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "created_at", "created_by", "modified_at", "modified_by"})
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(services.ServiceUrl, services.Method).WillReturnRows(rows)
+
+		entity, err := queries.NewServicesQuery(db).FindOneByServiceUrlAndMethodAndQueryIsNull(context.TODO(), *services.ServiceUrl, services.Method)
+		assert.Empty(t, entity)
+		assert.Error(t, err)
+	})
+	t.Run("DB no connection", func(t *testing.T) {
+		db, _ := NewMock()
+
+		db.Close()
+		entity, err := queries.NewServicesQuery(db).FindOneByServiceUrlAndMethodAndQueryIsNull(context.TODO(), *services.ServiceUrl, services.Method)
+		assert.Empty(t, entity)
+		assert.Error(t, err)
+		assert.EqualError(t, err, "error establishing a database connection")
+	})
 }
 
-func TestGetByServiceDefinitionAndMethodNoRows(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub databases connection", err)
-	}
+func TestFindOneByQueryID(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		db, mock := NewMock()
 
-	rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "service_definition", "is_query", "created_at", "created_by", "modified_at", "modified_by"})
-	query := "SELECT id, db_id, service_url, method, service_definition, is_query FROM services WHERE is_query = true AND service_definition = \\$1 AND method = \\$2"
-	mock.ExpectQuery(query).WithArgs(mockServicesList[0].ServiceDefinition, mockServicesList[0].Method).WillReturnRows(rows)
-	sqlxDB := sqlx.NewDb(db, "sqlmock")
-	a := queries.NewServicesQuery(sqlxDB)
+		query := "SELECT id, db_id, query_id, service_url, method, created_at, created_by, modified_at, modified_by FROM services WHERE query_id = $1"
 
-	mService, err := a.GetByServiceDefinitionAndMethod(context.TODO(), *mockServicesList[0].ServiceDefinition, mockServicesList[0].Method)
-	assert.Empty(t, mService)
-	assert.Error(t, err)
-	assert.Equal(t, err, sql.ErrNoRows)
+		rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "created_at", "created_by", "modified_at", "modified_by"}).
+			AddRow(services.ID, services.DbID, services.Method, services.ServiceUrl, services.CreatedAt, services.CreatedBy, services.ModifiedAt, services.ModifiedBy)
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(services.QueryID).WillReturnRows(rows)
+
+		entity, err := queries.NewServicesQuery(db).FindOneByQueryID(context.TODO(), *services.QueryID)
+		assert.NotNil(t, entity)
+		assert.NoError(t, err)
+	})
+	t.Run("Error", func(t *testing.T) {
+		db, mock := NewMock()
+
+		query := "SELECT id, db_id, query_id, service_url, method, created_at, created_by, modified_at, modified_by FROM services WHERE query_id = $1"
+
+		rows := sqlmock.NewRows([]string{"id", "db_id", "method", "service_url", "created_at", "created_by", "modified_at", "modified_by"})
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(services.QueryID).WillReturnRows(rows)
+
+		entity, err := queries.NewServicesQuery(db).FindOneByQueryID(context.TODO(), *services.QueryID)
+		assert.Empty(t, entity)
+		assert.Error(t, err)
+	})
+	t.Run("DB no connection", func(t *testing.T) {
+		db, _ := NewMock()
+
+		db.Close()
+		entity, err := queries.NewServicesQuery(db).FindOneByQueryID(context.TODO(), *services.QueryID)
+		assert.Empty(t, entity)
+		assert.Error(t, err)
+		assert.EqualError(t, err, "error establishing a database connection")
+	})
 }

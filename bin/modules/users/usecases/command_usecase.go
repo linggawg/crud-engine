@@ -2,14 +2,18 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
+	rolesQueries "engine/bin/modules/roles/repositories/queries"
 	models "engine/bin/modules/users/models/domain"
 	"engine/bin/modules/users/repositories/commands"
 	"engine/bin/modules/users/repositories/queries"
 	httpError "engine/bin/pkg/http-error"
 	"engine/bin/pkg/token"
+	"strings"
+
+	"github.com/google/uuid"
 
 	"engine/bin/pkg/utils"
-	"log"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -19,41 +23,60 @@ import (
 type UsersCommandUsecase struct {
 	UsersPostgreCommand commands.UsersPostgre
 	UsersPostgreQuery   queries.UsersPostgre
+	RolesPostgreQuery   rolesQueries.RolesPostgre
 }
 
-func NewCommandUsecase(UsersPostgreCommand commands.UsersPostgre, UsersPostgreQuery queries.UsersPostgre) *UsersCommandUsecase {
+func NewUsersCommandUsecase(UsersPostgreCommand commands.UsersPostgre, UsersPostgreQuery queries.UsersPostgre, RolesPostgreQuery rolesQueries.RolesPostgre) *UsersCommandUsecase {
 	return &UsersCommandUsecase{
 		UsersPostgreCommand: UsersPostgreCommand,
 		UsersPostgreQuery:   UsersPostgreQuery,
+		RolesPostgreQuery:   RolesPostgreQuery,
 	}
 }
 
 func (u UsersCommandUsecase) Login(ctx context.Context, params models.ReqLogin) utils.Result {
 	var result utils.Result
 
-	users, err := u.UsersPostgreQuery.GetByEmail(ctx, params.Email)
+	users, err := u.UsersPostgreQuery.FindOneByUsername(ctx, params.Username)
 	if err != nil {
-		log.Println(err)
-		errObj := httpError.NewNotFound()
-		errObj.Message = "Email tidak ditemukan"
-		result.Error = errObj
+		if err == sql.ErrNoRows {
+			errObj := httpError.NewNotFound()
+			errObj.Message = "username / password salah"
+			result.Error = errObj
+		} else {
+			errObj := httpError.NewInternalServerError()
+			errObj.Message = err.Error()
+			result.Error = errObj
+		}
+		return result
+	}
+
+	roles, err := u.RolesPostgreQuery.FindOneByID(ctx, users.RoleID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			errObj := httpError.NewNotFound()
+			errObj.Message = "roles tidak ditemukan"
+			result.Error = errObj
+		} else {
+			errObj := httpError.NewInternalServerError()
+			errObj.Message = err.Error()
+			result.Error = errObj
+		}
 		return result
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(users.Password), []byte(params.Password))
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		log.Println(err)
 		errObj := httpError.NewBadRequest()
-		errObj.Message = "Login gagal"
+		errObj.Message = "login gagal"
 		result.Error = errObj
 		return result
 	}
 
-	token, err := token.Generate(users.ID)
+	token, err := token.Generate(users.ID, roles.Name, params.Duration)
 	if err != nil {
-		log.Println(err)
 		errObj := httpError.NewBadRequest()
-		errObj.Message = "Login gagal"
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
@@ -64,38 +87,50 @@ func (u UsersCommandUsecase) Login(ctx context.Context, params models.ReqLogin) 
 
 func (u UsersCommandUsecase) RegisterUser(ctx context.Context, params models.ReqUser) utils.Result {
 	var result utils.Result
+	if !strings.EqualFold(params.Opts.RoleName, "admin") {
+		errObj := httpError.NewUnauthorized()
+		errObj.Message = "unauthorized access"
+		result.Error = errObj
+		return result
+	}
 
-	validatebyEmail, _ := u.UsersPostgreQuery.GetByEmail(ctx, params.Email)
-	if validatebyEmail != nil {
-		log.Println("Email sudah terpakai")
+	validatebyUsername, err := u.UsersPostgreQuery.FindOneByUsername(ctx, params.Username)
+	if err != nil && err != sql.ErrNoRows {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	} else if validatebyUsername != nil {
 		errObj := httpError.NewBadRequest()
-		errObj.Message = "Email sudah terpakai"
+		errObj.Message = "username sudah terpakai"
 		result.Error = errObj
 		return result
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println(err)
 		errObj := httpError.NewBadRequest()
-		errObj.Message = "Login gagal"
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
 	password := string(hashedPassword)
 
 	users := &models.Users{
-		Username:  params.Username,
-		Email:     params.Email,
-		Password:  password,
-		CreatedBy: params.UserId,
-		CreatedAt: null.TimeFrom(time.Now()),
+		ID:         uuid.NewString(),
+		Username:   params.Username,
+		RoleID:     params.RoleID,
+		Password:   password,
+		CreatedBy:  &params.Opts.UserID,
+		CreatedAt:  null.TimeFrom(time.Now()),
+		ModifiedAt: null.TimeFrom(time.Now()),
+		ModifiedBy: &params.Opts.UserID,
 	}
 
 	err = u.UsersPostgreCommand.InsertOne(ctx, users)
 	if err != nil {
-		errObj := httpError.NewConflict()
-		errObj.Message = "Failed insert user"
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}

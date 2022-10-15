@@ -6,6 +6,6 @@ import (
 )
 
 type UsersPostgre interface {
-	GetByID(ctx context.Context, id string) (users *models.Users, err error)
-	GetByEmail(ctx context.Context, email string) (user *models.Users, err error)
+	FindOneByID(ctx context.Context, id string) (users *models.Users, err error)
+	FindOneByUsername(ctx context.Context, username string) (users *models.Users, err error)
 }

@@ -6,5 +6,5 @@ import (
 )
 
 type QueryUsecase interface {
-	GetDbsConnection(ctx context.Context, userId, method, serviceUrl string, isQuery bool) utils.Result
+	GetDbsConnection(ctx context.Context, userId, method, serviceUrl, key string) utils.Result
 }

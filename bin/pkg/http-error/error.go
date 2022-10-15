@@ -10,6 +10,20 @@ type CommonError struct {
 	Data         interface{} `json:"data"`
 }
 
+// UnprocessableEntity struct
+type UnprocessableEntity struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+func NewUnprocessableEntity() UnprocessableEntity {
+	errObj := UnprocessableEntity{}
+	errObj.Message = "Unprocessable Entity"
+	errObj.Code = http.StatusUnprocessableEntity
+	return errObj
+}
+
 // BadRequest struct
 type BadRequest struct {
 	Code    int         `json:"code"`

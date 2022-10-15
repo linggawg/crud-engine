@@ -11,7 +11,7 @@ import (
 func NoAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			c.Set(echo.HeaderContentType, "application/json; charset=utf-8")
+			c.Set(echo.HeaderContentType, "application/json; charset=UTF-8")
 			return next(c)
 		}
 	}
@@ -20,7 +20,7 @@ func NoAuth() echo.MiddlewareFunc {
 func VerifyBearer() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			c.Set("Content-Type", "application/json; charset=utf-8")
+			c.Set(echo.HeaderContentType, "application/json; charset=UTF-8")
 
 			parsedToken := <-token.Validate(c.Request())
 			if parsedToken.Error != nil {

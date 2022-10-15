@@ -114,7 +114,14 @@ func getErrorStatusCode(err interface{}) httpError.CommonError {
 		errData.Data = obj.Data
 		errData.Message = obj.Message
 		return errData
+	case httpError.UnprocessableEntity:
+		errData.ResponseCode = http.StatusUnprocessableEntity
+		errData.Code = obj.Code
+		errData.Data = obj.Data
+		errData.Message = obj.Message
+		return errData
 	default:
+		errData.ResponseCode = http.StatusConflict
 		errData.Code = http.StatusConflict
 		return errData
 	}

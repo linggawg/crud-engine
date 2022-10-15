@@ -49,7 +49,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/login": {
+        "/v1/login": {
             "post": {
                 "description": "Login api",
                 "consumes": [
@@ -65,7 +65,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "JSON request body based on column name",
-                        "name": "insertRequest",
+                        "name": "ReqLogin",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -83,7 +83,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/register": {
+        "/v1/register": {
             "post": {
                 "description": "Register new user for login",
                 "consumes": [
@@ -99,7 +99,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "JSON request body based on column name",
-                        "name": "insertRequest",
+                        "name": "ReqUser",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -117,7 +117,122 @@ const docTemplate = `{
                 }
             }
         },
-        "/sql/{table}": {
+        "/v1/services/default": {
+            "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Delete all services by services url",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Delete Default services",
+                "parameters": [
+                    {
+                        "description": "JSON request body based on column name, required service_url",
+                        "name": "UsersServicesRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ServicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users-services/default": {
+            "post": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Generate Default services GET, POST, PUT, PATCH, DELETE and create users services",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Generate Default services and users-services",
+                "parameters": [
+                    {
+                        "description": "JSON request body based on column name, required service_url, user_id, db_id",
+                        "name": "UsersServicesRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UsersServicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Delete all users-services by user_id and services_url",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Delete Default users-services",
+                "parameters": [
+                    {
+                        "description": "JSON request body based on column name, required service_url, user_id",
+                        "name": "UsersServicesRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UsersServicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/{table}": {
             "get": {
                 "security": [
                     {
@@ -132,7 +247,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
                 "summary": "Find all Data",
                 "parameters": [
@@ -144,9 +259,9 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "boolean",
-                        "description": "if isQuery is true, the sql query statement is fetched directly from the path table",
-                        "name": "isQuery",
+                        "type": "string",
+                        "description": "key id of queries",
+                        "name": "key",
                         "in": "query"
                     },
                     {
@@ -158,13 +273,13 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "column name (ex : username, email)",
-                        "name": "colls",
+                        "name": "columns",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "where condition query sql",
-                        "name": "query",
+                        "name": "filter",
                         "in": "query"
                     },
                     {
@@ -209,7 +324,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
                 "summary": "Insert Data",
                 "parameters": [
@@ -241,14 +356,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/sql/{table}/{id}": {
+        "/v1/{table}/{value}": {
             "put": {
                 "security": [
                     {
                         "Authorization": []
                     }
                 ],
-                "description": "Update data by ID (primary key) and data by column name in format JSON",
+                "description": "Update data by field_id and data by column name in format JSON, Requires sending complete data from the table, so that when there is data that is not sent it will be changed to the default value",
                 "consumes": [
                     "application/json"
                 ],
@@ -256,9 +371,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
-                "summary": "Update Data",
+                "summary": "Put Update Data",
                 "parameters": [
                     {
                         "type": "string",
@@ -269,9 +384,16 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Primary Key",
-                        "name": "id",
+                        "description": "Value of id",
+                        "name": "value",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Update based on field_id ",
+                        "name": "field_id",
+                        "in": "query",
                         "required": true
                     },
                     {
@@ -300,7 +422,7 @@ const docTemplate = `{
                         "Authorization": []
                     }
                 ],
-                "description": "Delete data by ID (primary key)",
+                "description": "Delete data by field_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -308,7 +430,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "CrudEngine"
+                    "Engine"
                 ],
                 "summary": "Delete Data",
                 "parameters": [
@@ -321,10 +443,76 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Primary Key",
-                        "name": "id",
+                        "description": "Value Of id",
+                        "name": "value",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Delete based on field_id ",
+                        "name": "field_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.BaseWrapperModel"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "Authorization": []
+                    }
+                ],
+                "description": "Update data by field_id and data by column name in format JSON, Can accept changes to only one field",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Engine"
+                ],
+                "summary": "Patch Update Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table Name",
+                        "name": "table",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Value of id",
+                        "name": "value",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Update based on field_id ",
+                        "name": "field_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "JSON request body based on column name",
+                        "name": "updateRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 ],
                 "responses": {
@@ -342,14 +530,18 @@ const docTemplate = `{
         "models.ReqLogin": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "duration",
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string"
+                "duration": {
+                    "type": "integer"
                 },
                 "password": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }
@@ -357,21 +549,70 @@ const docTemplate = `{
         "models.ReqUser": {
             "type": "object",
             "required": [
-                "email",
                 "password",
+                "role_id",
                 "username"
             ],
             "properties": {
-                "email": {
+                "password": {
                     "type": "string"
                 },
-                "password": {
+                "role_id": {
                     "type": "string"
                 },
                 "userid": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ServicesRequest": {
+            "type": "object",
+            "required": [
+                "service_url"
+            ],
+            "properties": {
+                "opts": {
+                    "$ref": "#/definitions/token.Claim"
+                },
+                "service_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UsersServicesRequest": {
+            "type": "object",
+            "required": [
+                "service_url",
+                "user_id"
+            ],
+            "properties": {
+                "db_id": {
+                    "type": "string"
+                },
+                "opts": {
+                    "$ref": "#/definitions/token.Claim"
+                },
+                "service_url": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "token.Claim": {
+            "type": "object",
+            "properties": {
+                "authorization": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "userId": {
                     "type": "string"
                 }
             }
@@ -386,6 +627,7 @@ const docTemplate = `{
                 "message": {
                     "type": "string"
                 },
+                "meta": {},
                 "success": {
                     "type": "boolean"
                 }
@@ -404,10 +646,10 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:3000",
-	BasePath:         "/",
-	Schemes:          []string{"http"},
-	Title:            "Echo Swagger Example API",
+	Host:             "",
+	BasePath:         "/engine/",
+	Schemes:          []string{},
+	Title:            "Echo Swagger Engine Services",
 	Description:      "This is a sample server server.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
