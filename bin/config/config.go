@@ -1,12 +1,14 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type Env struct {
@@ -37,7 +39,12 @@ func loadEnv() {
 	currentWorkDirectory, _ := os.Getwd()
 	rootPath := projectName.Find([]byte(currentWorkDirectory))
 
-	err := godotenv.Load(string(rootPath) + `/.env`)
+	envPath := `.env`
+	if runtime.GOOS == "windows" {
+		envPath = `/.env`
+	}
+
+	err := godotenv.Load(string(rootPath) + envPath)
 
 	if err != nil {
 		log.Println(err)
@@ -116,20 +123,4 @@ func init() {
 	if !ok {
 		panic("missing DB_DIALECT environment")
 	}
-
-	GlobalEnv.EngineUser, ok = os.LookupEnv("ENGINE_USER_ADMIN")
-	if !ok {
-		panic("missing ENGINE_USER_ADMIN environment")
-	}
-
-	GlobalEnv.EnginePassword, ok = os.LookupEnv("ENGINE_PASSWORD_ADMIN")
-	if !ok {
-		panic("missing ENGINE_PASSWORD_ADMIN environment")
-	}
-
-	GlobalEnv.EngineRole, ok = os.LookupEnv("ENGINE_ROLE")
-	if !ok {
-		panic("missing ENGINE_ROLEs environment")
-	}
-
 }

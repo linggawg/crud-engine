@@ -9,7 +9,6 @@ import (
 	"engine/bin/modules/users/repositories/queries"
 	httpError "engine/bin/pkg/http-error"
 	"engine/bin/pkg/token"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -87,12 +86,6 @@ func (u UsersCommandUsecase) Login(ctx context.Context, params models.ReqLogin) 
 
 func (u UsersCommandUsecase) RegisterUser(ctx context.Context, params models.ReqUser) utils.Result {
 	var result utils.Result
-	if !strings.EqualFold(params.Opts.RoleName, "admin") {
-		errObj := httpError.NewUnauthorized()
-		errObj.Message = "unauthorized access"
-		result.Error = errObj
-		return result
-	}
 
 	validatebyUsername, err := u.UsersPostgreQuery.FindOneByUsername(ctx, params.Username)
 	if err != nil && err != sql.ErrNoRows {

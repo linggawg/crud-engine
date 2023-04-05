@@ -30,21 +30,10 @@ func New() *HttpSqlx {
 	}
 }
 
-// Mount function
 func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
 	echoGroup.DELETE("/v1/services/default", h.DeleteDefaultServicesMethod, middleware.VerifyBearer())
 }
 
-// Delete DeleteDefaultServicesMethod godoc
-// @Summary      Delete Default services
-// @Description  Delete all services by services url
-// @Tags         Services
-// @Accept       json
-// @Produce      json
-// @Param		 UsersServicesRequest body models.ServicesRequest true "JSON request body based on column name, required service_url"
-// @Security     Authorization
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/services/default [delete]
 func (h *HttpSqlx) DeleteDefaultServicesMethod(c echo.Context) error {
 	var (
 		payload models.ServicesRequest

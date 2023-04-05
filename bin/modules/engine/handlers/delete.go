@@ -9,18 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// Delete DeleteDate godoc
-// @Summary      Delete Data
-// @Description  Delete data by field_id
-// @Tags         Engine
-// @Accept       json
-// @Produce      json
-// @Param        table   path    string  true  "Table Name"
-// @Param        value   path    string  true  "Value Of id"
-// @Param        field_id    query     string  true  "Delete based on field_id "
-// @Security     Authorization
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/{table}/{value} [delete]
 func (h *EngineHTTPHandler) Delete(c echo.Context) error {
 	header, _ := json.Marshal(c.Get("opts"))
 	payload := &models.EngineRequest{

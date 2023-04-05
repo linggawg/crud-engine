@@ -7,7 +7,6 @@ import (
 	"engine/bin/modules/services/repositories/queries"
 	httpError "engine/bin/pkg/http-error"
 	"engine/bin/pkg/utils"
-	"strings"
 )
 
 type ServicesCommandUsecase struct {
@@ -24,12 +23,6 @@ func NewServicesCommandUsecase(ServicesPostgreCommand commands.ServicesPostgre, 
 
 func (s ServicesCommandUsecase) DeleteByServiceUrl(ctx context.Context, payload models.ServicesRequest) utils.Result {
 	var result utils.Result
-	if !strings.EqualFold(payload.Opts.RoleName, "admin") {
-		errObj := httpError.NewUnauthorized()
-		errObj.Message = "unauthorized access"
-		result.Error = errObj
-		return result
-	}
 
 	err := s.ServicesPostgreCommand.DeleteByServiceUrl(ctx, payload.ServiceUrl)
 	if err != nil {

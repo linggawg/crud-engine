@@ -10,19 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// Patch UpdateData godoc
-// @Summary      Patch Update Data
-// @Description  Update data by field_id and data by column name in format JSON, Can accept changes to only one field
-// @Tags         Engine
-// @Accept       json
-// @Produce      json
-// @Param        table   path    string  true  "Table Name"
-// @Param        value   path    string  true  "Value of id"
-// @Param        field_id    query     string  true  "Update based on field_id "
-// @Param		 updateRequest body map[string]interface{} true "JSON request body based on column name"
-// @Security     Authorization
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/{table}/{value} [patch]
 func (h *EngineHTTPHandler) Patch(c echo.Context) error {
 	var (
 		jsonBody map[string]interface{}

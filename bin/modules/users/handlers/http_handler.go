@@ -32,22 +32,11 @@ func New() *HttpSqlx {
 	}
 }
 
-// Mount function
 func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
 	echoGroup.POST("/v1/login", h.Login, middleware.NoAuth())
 	echoGroup.POST("/v1/register", h.RegisterUser, middleware.VerifyBearer())
 }
 
-// Post Login godoc
-// @Summary      Login
-// @Description  Login api
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Param		 ReqLogin body models.ReqLogin true "JSON request body based on column name"
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/login [post]
-// Login function
 func (h *HttpSqlx) Login(c echo.Context) error {
 	var (
 		params models.ReqLogin
@@ -70,15 +59,6 @@ func (h *HttpSqlx) Login(c echo.Context) error {
 	return utils.Response(result.Data, "Login User", http.StatusOK, c)
 }
 
-// Post RegisterUser godoc
-// @Summary      Register
-// @Description  Register new user for login
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Param		 ReqUser body models.ReqUser true "JSON request body based on column name"
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/register [post]
 func (h *HttpSqlx) RegisterUser(c echo.Context) error {
 	var (
 		params models.ReqUser

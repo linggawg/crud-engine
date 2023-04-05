@@ -10,17 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// Post UpdateData godoc
-// @Summary      Insert Data
-// @Description  Insert data by column name in format JSON
-// @Tags         Engine
-// @Accept       json
-// @Produce      json
-// @Param        table   path    string  true  "Table Name"
-// @Param		 insertRequest body map[string]interface{} true "JSON request body based on column name"
-// @Security     Authorization
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/{table} [post]
 func (h *EngineHTTPHandler) Post(c echo.Context) error {
 	var (
 		jsonBody map[string]interface{}

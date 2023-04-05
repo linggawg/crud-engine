@@ -41,16 +41,6 @@ func (h *HttpSqlx) Mount(echoGroup *echo.Group) {
 	echoGroup.DELETE("/v1/users-services/default", h.DeleteByUsersIdAndServiceUrl, middleware.VerifyBearer())
 }
 
-// Post GenerateDefaultUsersServices godoc
-// @Summary      Generate Default services and users-services
-// @Description  Generate Default services GET, POST, PUT, PATCH, DELETE and create users services
-// @Tags         Services
-// @Accept       json
-// @Produce      json
-// @Param		 UsersServicesRequest body models.UsersServicesRequest true "JSON request body based on column name, required service_url, user_id, db_id"
-// @Security     Authorization
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/users-services/default [post]
 func (h *HttpSqlx) GenerateDefaultUsersServices(c echo.Context) error {
 	var (
 		payload models.UsersServicesRequest
@@ -76,16 +66,6 @@ func (h *HttpSqlx) GenerateDefaultUsersServices(c echo.Context) error {
 	return utils.Response(result.Data, "Generate Default Users Services Method", http.StatusCreated, c)
 }
 
-// Delete DeleteByUsersIdAndServiceUrl godoc
-// @Summary      Delete Default users-services
-// @Description  Delete all users-services by user_id and services_url
-// @Tags         Services
-// @Accept       json
-// @Produce      json
-// @Param		 UsersServicesRequest body models.UsersServicesRequest true "JSON request body based on column name, required service_url, user_id"
-// @Security     Authorization
-// @Success      200  {object} utils.BaseWrapperModel
-// @Router       /v1/users-services/default [delete]
 func (h *HttpSqlx) DeleteByUsersIdAndServiceUrl(c echo.Context) error {
 	var (
 		payload models.UsersServicesRequest

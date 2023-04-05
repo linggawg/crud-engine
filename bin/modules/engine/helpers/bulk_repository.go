@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"engine/bin/modules/engine/models/mocks"
 	"engine/bin/modules/engine/repositories"
 	"engine/bin/modules/engine/repositories/mysql"
 	"engine/bin/modules/engine/repositories/postgresql"
@@ -16,7 +15,6 @@ func InitBulkRepository() *BulkRepository {
 	var repo = make(map[string]repositories.Repository)
 	repo[utils.DialectPostgres] = &postgresql.PostgreSQL{}
 	repo[utils.DialectMysql] = &mysql.MySQL{}
-	repo[utils.DialectMocks] = &mocks.Repository{}
 	return &BulkRepository{repo}
 }
 

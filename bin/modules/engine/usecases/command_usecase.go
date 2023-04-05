@@ -33,7 +33,7 @@ func NewCommandUsecase(db connection.Connection, repo helpers.BulkRepository) *E
 
 func (h *EngineCommandUsecase) SetupDataset(ctx context.Context, dialect string, db *sqlx.DB) (result utils.Result) {
 	repository := h.repo.GetBulkRepository(dialect)
-	sql := `INSERT INTO roles (id, name, created_at, created_by) SELECT $1, $2, $3, $4 WHERE NOT EXISTS ( SELECT name FROM roles WHERE name ILIKE $2 );`
+	sql := `INSERT INTO roles (id, name, created_at, created_by) SELECT $1, $2, $3, $4 WHERE NOT EXISTS ( SELECT name FROM roles WHERE LOWER(name) LIKE LOWER($2) );`
 	var role []interface{}
 	role = append(role, uuid.New().String(), config.GlobalEnv.EngineRole, time.Now(), config.ProjectDirName)
 	err := repository.InsertOne(ctx, db, sql, role)
@@ -72,7 +72,7 @@ func (h *EngineCommandUsecase) SetupDataset(ctx context.Context, dialect string,
 		}
 	}
 	var apps []interface{}
-	sql = `INSERT INTO apps (id, name, created_at, created_by) SELECT $1, CAST($2 AS VARCHAR), $3, $4 WHERE NOT EXISTS ( SELECT name FROM apps WHERE name ILIKE $2 );`
+	sql = `INSERT INTO apps (id, name, created_at, created_by) SELECT $1, CAST($2 AS VARCHAR), $3, $4 WHERE NOT EXISTS ( SELECT name FROM apps WHERE LOWER(name) LIKE LOWER($2) );`
 	apps = append(apps, uuid.New().String(), config.ProjectDirName, time.Now(), config.ProjectDirName)
 	err = repository.InsertOne(ctx, db, sql, apps)
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 	models "engine/bin/modules/users-services/models/domain"
 	"engine/bin/modules/users-services/repositories/commands"
 	"engine/bin/modules/users-services/repositories/queries"
-	"strings"
 
 	httpError "engine/bin/pkg/http-error"
 
@@ -42,12 +41,6 @@ func NewUsersServicesCommandUsecase(
 
 func (u UsersServicesCommandUsecase) InsertAllByServices(ctx context.Context, payload models.UsersServicesRequest) utils.Result {
 	var result utils.Result
-	if !strings.EqualFold(payload.Opts.RoleName, "admin") {
-		errObj := httpError.NewUnauthorized()
-		errObj.Message = "unauthorized access"
-		result.Error = errObj
-		return result
-	}
 
 	methods := []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
 	for _, method := range methods {
@@ -119,12 +112,6 @@ func (u UsersServicesCommandUsecase) InsertAllByServices(ctx context.Context, pa
 
 func (u UsersServicesCommandUsecase) DeleteByUsersIdAndServiceUrl(ctx context.Context, payload models.UsersServicesRequest) utils.Result {
 	var result utils.Result
-	if !strings.EqualFold(payload.Opts.RoleName, "admin") {
-		errObj := httpError.NewUnauthorized()
-		errObj.Message = "unauthorized access"
-		result.Error = errObj
-		return result
-	}
 
 	err := u.UsersServicesPostgreCommand.DeleteByUsersIdAndServiceUrl(ctx, payload.UserID, payload.ServiceUrl)
 	if err != nil {
