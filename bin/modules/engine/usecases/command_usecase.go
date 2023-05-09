@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 )
@@ -33,55 +32,21 @@ func NewCommandUsecase(db connection.Connection, repo helpers.BulkRepository) *E
 
 func (h *EngineCommandUsecase) SetupDataset(ctx context.Context, dialect string, db *sqlx.DB) (result utils.Result) {
 	repository := h.repo.GetBulkRepository(dialect)
-	sql := `INSERT INTO roles (id, name, created_at, created_by) SELECT $1, $2, $3, $4 WHERE NOT EXISTS ( SELECT name FROM roles WHERE LOWER(name) LIKE LOWER($2) );`
-	var role []interface{}
-	role = append(role, uuid.New().String(), config.GlobalEnv.EngineRole, time.Now(), config.ProjectDirName)
-	err := repository.InsertOne(ctx, db, sql, role)
-	if err != nil {
-		errObj := httpError.NewConflict()
-		errObj.Message = err.Error()
-		result.Error = errObj
-		return result
-	}
-	res, err := repository.FindData(ctx, db, fmt.Sprintf("SELECT id FROM roles WHERE name = '%s'", config.GlobalEnv.EngineRole))
-	if err != nil {
-		errObj := httpError.NewInternalServerError()
-		errObj.Message = err.Error()
-		result.Error = errObj
-		return result
-	}
-	if len(res) > 0 {
-		roleId := res[0]["id"]
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(config.GlobalEnv.EnginePassword), bcrypt.DefaultCost)
-		if err != nil {
-			errObj := httpError.NewBadRequest()
-			errObj.Message = err.Error()
-			result.Error = errObj
-			return result
-		}
-		password := string(hashedPassword)
-		var user []interface{}
-		sql = `INSERT INTO users (id, role_id, username, password, created_at, created_by) SELECT $1, $2, CAST($3 AS VARCHAR), $4, $5, $6 WHERE NOT EXISTS ( SELECT username FROM users WHERE username = $3 );`
-		user = append(user, uuid.New().String(), roleId, config.GlobalEnv.EngineUser, password, time.Now(), config.ProjectDirName)
-		err = repository.InsertOne(ctx, db, sql, user)
-		if err != nil {
-			errObj := httpError.NewConflict()
-			errObj.Message = err.Error()
-			result.Error = errObj
-			return result
-		}
-	}
+
+	//insert default app
 	var apps []interface{}
-	sql = `INSERT INTO apps (id, name, created_at, created_by) SELECT $1, CAST($2 AS VARCHAR), $3, $4 WHERE NOT EXISTS ( SELECT name FROM apps WHERE LOWER(name) LIKE LOWER($2) );`
+	sql := `INSERT INTO apps (id, name, created_at, created_by) SELECT $1, CAST($2 AS VARCHAR), $3, $4 WHERE NOT EXISTS (SELECT name FROM apps WHERE LOWER(name) LIKE LOWER($2));`
 	apps = append(apps, uuid.New().String(), config.ProjectDirName, time.Now(), config.ProjectDirName)
-	err = repository.InsertOne(ctx, db, sql, apps)
+	err := repository.InsertOne(ctx, db, sql, apps)
 	if err != nil {
 		errObj := httpError.NewConflict()
 		errObj.Message = err.Error()
 		result.Error = errObj
 		return result
 	}
-	res, err = repository.FindData(ctx, db, fmt.Sprintf("SELECT id FROM apps WHERE name = '%s'", config.ProjectDirName))
+
+	//insert default dbs
+	res, err := repository.FindData(ctx, db, fmt.Sprintf("SELECT id FROM apps WHERE name = '%s'", config.ProjectDirName))
 	if err != nil {
 		errObj := httpError.NewInternalServerError()
 		errObj.Message = err.Error()
@@ -96,6 +61,40 @@ func (h *EngineCommandUsecase) SetupDataset(ctx context.Context, dialect string,
 				WHERE NOT EXISTS ( SELECT id FROM dbs WHERE name = $3 AND host = $4 AND port = $5 AND username = $6 AND password = $7 AND dialect = $8 );`
 		dbs = append(dbs, uuid.New().String(), appId, config.GlobalEnv.DBName, config.GlobalEnv.DBHost, config.GlobalEnv.DBPort, config.GlobalEnv.DBUser, config.GlobalEnv.DBPassword, config.GlobalEnv.DBDialect, time.Now(), config.ProjectDirName)
 		err = repository.InsertOne(ctx, db, sql, dbs)
+		if err != nil {
+			errObj := httpError.NewConflict()
+			errObj.Message = err.Error()
+			result.Error = errObj
+			return result
+		}
+	}
+
+	//insert default role
+	var role []interface{}
+	sql = `INSERT INTO roles (id, name, created_at, created_by) SELECT $1, CAST($2 AS VARCHAR), $3, $4 WHERE NOT EXISTS (SELECT name FROM roles WHERE LOWER(name) LIKE LOWER($2));`
+	role = append(role, uuid.New().String(), utils.RoleAdmin, time.Now(), utils.RoleAdmin)
+	err = repository.InsertOne(ctx, db, sql, role)
+	if err != nil {
+		errObj := httpError.NewConflict()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+
+	//insert default dbs
+	res, err = repository.FindData(ctx, db, fmt.Sprintf("SELECT id FROM roles WHERE name = '%s'", utils.RoleAdmin))
+	if err != nil {
+		errObj := httpError.NewInternalServerError()
+		errObj.Message = err.Error()
+		result.Error = errObj
+		return result
+	}
+	if len(res) > 0 {
+		roleId := res[0]["id"]
+		var user []interface{}
+		sql = `INSERT INTO users (id, role_id, username, password, created_at, created_by) SELECT $1, $2, CAST($3 AS VARCHAR), CAST($4 AS VARCHAR), $5, $6 WHERE NOT EXISTS (SELECT name FROM users WHERE LOWER(name) LIKE LOWER($3));`
+		user = append(user, uuid.New().String(), roleId, utils.RoleAdmin, utils.RoleAdmin, time.Now(), utils.RoleAdmin)
+		err = repository.InsertOne(ctx, db, sql, user)
 		if err != nil {
 			errObj := httpError.NewConflict()
 			errObj.Message = err.Error()
