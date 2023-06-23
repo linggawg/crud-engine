@@ -159,7 +159,6 @@ func (s *PostgreSQL) InsertOne(ctx context.Context, conn interface{}, query stri
 
 	_, err = conn.(*sqlx.DB).ExecContext(ctx, query, args...)
 	if err != nil {
-		log.Println("asdasddadsa")
 		log.Println(err.Error())
 		return err
 	}
